@@ -169,7 +169,7 @@ __END__
     sub id_of { return { id => $_[0]->{id} }; };
 
     # Cache information about a project
-    my $project    = $projects{'My Project'}->{id};
+    my $pid        = $projects{'My Project'}->{id};
     my %components = {map {($_->{name} => $_)} @{$jira->GET("/project/$pid/components")}};
 
     # File a bug
