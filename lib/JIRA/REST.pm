@@ -51,7 +51,7 @@ sub new {
     my $rest = REST::Client->new($rest_client_config);
 
     # Set default base URL
-    $rest->setHost("$URL/rest/api/latest");
+    $rest->setHost($URL);
 
     # Follow redirects/authentication by default
     $rest->setFollow(1);
