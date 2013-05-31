@@ -1,0 +1,23 @@
+=pod
+
+JIRA::REST - A thin wrapper around JIRA's REST API
+
+CAUTION - THIS IS STILL ALPHA CODE
+
+L<JIRA|http://www.atlassian.com/software/jira> is a proprietary bug
+tracking system from
+L<Atlassian|http://www.atlassian.com/software/jira/>.
+
+This module is a thin wrapper around L<JIRA's REST
+API|https://docs.atlassian.com/jira/REST/latest/>, which is
+superseding it's old L<SOAP
+API|http://docs.atlassian.com/software/jira/docs/api/rpc-jira-plugin/latest/com/atlassian/jira/rpc/soap/JiraSoapService.html>,
+for which there is another Perl module called
+L<JIRA::Client|http://search.cpan.org/dist/JIRA-Client/>.
+
+Copyright (c) 2013 by CPqD (http://www.cpqd.com.br/)
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
