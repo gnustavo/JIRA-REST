@@ -87,7 +87,7 @@ sub _content {
     return unless $content;
 
     if (! defined $type) {
-        return;
+        croak "Cannot convert response content with no Content-Type specified.\n";
     } elsif ($type =~ m:^application/json:i) {
         return $self->{json}->decode($content);
     } elsif ($type =~ m:^text/plain:i) {
