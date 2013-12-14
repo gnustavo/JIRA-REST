@@ -84,6 +84,8 @@ sub _content {
         croak "ERROR: $code - $message\n$type\n$content\n";
     }
 
+    return unless $content;
+
     if (! defined $type) {
         return;
     } elsif ($type =~ m:^application/json:i) {
