@@ -1,6 +1,6 @@
 =pod
 
-JIRA::REST - A thin wrapper around JIRA's REST API
+JIRA::REST - Thin wrapper around JIRA's REST API
 
 CAUTION - THIS IS STILL ALPHA CODE
 

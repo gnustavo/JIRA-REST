@@ -1,5 +1,5 @@
 package JIRA::REST;
-# ABSTRACT: A thin wrapper around JIRA's REST API
+# ABSTRACT: Thin wrapper around JIRA's REST API
 
 use 5.010;
 use utf8;
