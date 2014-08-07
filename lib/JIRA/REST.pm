@@ -69,6 +69,42 @@ sub new {
     } => $class;
 }
 
+sub _error {
+    my ($self, $content, $type, $code) = @_;
+
+    $type = 'text/plain' unless $type;
+    $code = 500          unless $code;
+
+    my $msg = __PACKAGE__ . " Error[$code";
+
+    if (eval {require HTTP::Status}) {
+        if (my $status = HTTP::Status::status_message($code)) {
+            $msg .= " - $status";
+        }
+    }
+
+    $msg .= "]:\n";
+
+    if ($type =~ m:text/plain:i) {
+        $msg .= $content;
+    } elsif ($type =~ m:application/json:) {
+        my $error = $self->{json}->decode($content);
+        if (ref $error eq 'HASH' && exists $error->{errorMessages}) {
+            foreach my $message (@{$error->{errorMessages}}) {
+                $msg .= "- $message\n";
+            }
+        } else {
+            $msg .= $content;
+        }
+    } elsif ($type =~ m:text/html:i && eval {require HTML::TreeBuilder}) {
+        $msg .= HTML::TreeBuilder->new_from_content($content)->as_text;
+    } else {
+        $msg .= "<unconvertable Content-Type: '$type}'>";
+    };
+    $msg =~ s/\n*$//s;       # strip trailing newlines
+    return $msg;
+}
+
 sub _content {
     my ($self) = @_;
 
@@ -77,30 +113,26 @@ sub _content {
     my $type    = $rest->responseHeader('Content-Type');
     my $content = $rest->responseContent();
 
-    unless ($code =~ /^2/) {
-        my $message = eval {require HTTP::Status}
-            ? HTTP::Status::status_message($code) || '(unknown)'
-                : '(?)';
-        croak "ERROR: $code - $message\n$type\n$content\n";
-    }
+    $code =~ /^2/
+        or croak $self->_error($content, $type, $code);
 
     return unless $content;
 
     if (! defined $type) {
-        croak "Cannot convert response content with no Content-Type specified.\n";
+        croak $self->_error("Cannot convert response content with no Content-Type specified.");
     } elsif ($type =~ m:^application/json:i) {
         return $self->{json}->decode($content);
     } elsif ($type =~ m:^text/plain:i) {
         return $content;
     } else {
-        croak "I don't understand content with Content-Type '$type'.\n";
+        croak $self->_error("I don't understand content with Content-Type '$type'.");
     }
 }
 
 sub _build_query {
-    my ($query) = @_;
+    my ($self, $query) = @_;
 
-    is_hash_ref($query) or croak "The QUERY argument must be a hash-ref.\n";
+    is_hash_ref($query) or croak $self->_error("The QUERY argument must be a hash-ref.");
 
     return '?'. join('&', map {$_ . '=' . uri_escape($query->{$_})} keys %$query);
 }
@@ -108,7 +140,7 @@ sub _build_query {
 sub GET {
     my ($self, $path, $query) = @_;
 
-    $path .= _build_query($query) if $query;
+    $path .= $self->_build_query($query) if $query;
 
     $self->{rest}->GET($path);
 
@@ -118,7 +150,7 @@ sub GET {
 sub DELETE {
     my ($self, $path, $query) = @_;
 
-    $path .= _build_query($query) if $query;
+    $path .= $self->_build_query($query) if $query;
 
     $self->{rest}->DELETE($path);
 
@@ -128,7 +160,7 @@ sub DELETE {
 sub PUT {
     my ($self, $path, $query, $value, $headers) = @_;
 
-    $path .= _build_query($query) if $query;
+    $path .= $self->_build_query($query) if $query;
 
     $headers                   //= {};
     $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
@@ -141,7 +173,7 @@ sub PUT {
 sub POST {
     my ($self, $path, $query, $value, $headers) = @_;
 
-    $path .= _build_query($query) if $query;
+    $path .= $self->_build_query($query) if $query;
 
     $headers                   //= {};
     $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
