@@ -183,6 +183,46 @@ sub POST {
     return $self->_content();
 }
 
+ sub set_search_iterator {
+    my ($self, $params) = @_;
+
+    my %params = ( %$params );  # rebuild the hash to own it
+
+    $params{startAt}    = 0;
+    $params{maxResults} = 256
+        unless exists $params{maxResults};
+
+    my $results = $self->POST('/search', \%params);
+
+    $self->{iter} = {
+        params  => \%params,    # params hash used in the previous call
+        results => $results,    # issues returned by the last call
+        offset  => 0,           # offset to be used in the next call
+    };
+
+    return;
+}
+
+sub next_issue {
+    my ($self) = @_;
+
+    my $iter = $self->{iter}
+        or croak $self->_error("You must call set_search_iterator before calling next_issue");
+
+    if ($iter->{offset} == $iter->{results}{total}) {
+        if ($iter->{results}{startAt} + $iter->{offset} == $iter->{results}{maxResults}) {
+            $self->{iter} = undef;
+            return undef;
+        } else {
+            $iter->{params}{startAt} = $iter->{results}{startAt} + $iter->{offset};
+            $iter->{results}         = $self->POST('/search', $iter->{params});
+            $iter->{offset}          = 0;
+        }
+    }
+
+    return $iter->{results}{issues}[$iter->{offset}++];
+}
+
 1;
 
 
@@ -230,6 +270,17 @@ __END__
     });
 
     foreach my $issue (@{$search->{issues}}) {
+        print "Found issue $issue->{key}\n";
+    }
+
+    # Iterate using utility methods
+    $jira->set_search_iterator({
+        jql        => 'project = "TST" and status = "open"',
+        maxResults => 16,
+        fields     => [ qw/summary status assignee/ ],
+    });
+
+    while (my $issue = $jira->next_issue) {
         print "Found issue $issue->{key}\n";
     }
 
@@ -287,7 +338,7 @@ overwrites any value associated with the C<host> key in this hash.
 
 =back
 
-=head1 METHODS
+=head1 REST METHODS
 
 JIRA's REST API documentation lists dozens of "resources" which can be
 operated via the standard HTTP requests: GET, DELETE, PUT, and
@@ -398,6 +449,30 @@ Creates RESOURCE based on VALUE.
 =head2 POST RESOURCE, QUERY, VALUE [, HEADERS]
 
 Updates RESOURCE based on VALUE.
+
+=head1 UTILITY METHODS
+
+This module provides a few utility methods.
+
+=head2 B<set_search_iterator> PARAMS
+
+Sets up an iterator for the search specified by the hash-ref PARAMS. It must
+be called before calls to B<next_issue>.
+
+PARAMS must conform with the query parameters allowed for the
+C</rest/api/2/search> JIRA REST endpoint. It may specify a C<maxResults>
+parameter. If not, a default of 256 will be used.
+
+=head2 B<next_issue>
+
+This must be called after a call to B<set_search_iterator>. Each call
+returns a reference to the next issue from the filter. When there are no
+more issues it returns undef.
+
+Using the set_search_iterator/next_issue utility methods you can iterate
+through large sets of issues without worrying about the startAt/total/offset
+attributes in the response from the /search REST endpoint. These methods
+implement the "paging" algorithm needed to work with those attributes.
 
 =head1 SEE ALSO
 
