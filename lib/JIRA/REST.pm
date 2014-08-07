@@ -234,26 +234,12 @@ __END__
 
     my $jira = JIRA::REST->new('https://jira.example.net', 'myuser', 'mypass');
 
-    # Cache some JIRA objects
-    my %issuetypes = map {($_->{name} => $_)} @{$jira->GET('/issuetype')};
-    my %priorities = map {($_->{name} => $_)} @{$jira->GET('/priority' )};
-    my %projects   = map {($_->{name} => $_)} @{$jira->GET('/project'  )};
-
-    # A handy routine to construct id hashes
-    sub id_of { return { id => $_[0]->{id} }; };
-
-    # Cache information about a project
-    my $pid        = $projects{'My Project'}->{id};
-    my %components = map {($_->{name} => $_)} @{$jira->GET("/project/$pid/components")};
-
     # File a bug
     my $issue = $jira->POST('/issue', undef, {
         fields => {
-            project   => id_of($projects{'My Project'}),
-            issuetype => id_of($issuetypes{Bug}),
+            project   => { key => 'PRJ' },
+            issuetype => { name => 'Bug' },
             summary   => 'Cannot login',
-            priority  => id_of($priorities{Major}),
-            versions  => [ id_of($components{auth_module}) ],
             description => 'Bla bla bla',
         },
     });
