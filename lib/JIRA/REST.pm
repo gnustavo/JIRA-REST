@@ -212,7 +212,7 @@ sub next_issue {
     if ($iter->{offset} == $iter->{results}{total}) {
         if ($iter->{results}{startAt} + $iter->{offset} == $iter->{results}{maxResults}) {
             $self->{iter} = undef;
-            return undef;
+            return;
         } else {
             $iter->{params}{startAt} = $iter->{results}{startAt} + $iter->{offset};
             $iter->{results}         = $self->POST('/search', $iter->{params});
