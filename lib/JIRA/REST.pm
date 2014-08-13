@@ -101,7 +101,7 @@ sub _error {
     } else {
         $msg .= "<unconvertable Content-Type: '$type}'>";
     };
-    $msg =~ s/\n*$//s;       # strip trailing newlines
+    $msg =~ s/\n*$/\n/s;       # end message with a single newline
     return $msg;
 }
 
