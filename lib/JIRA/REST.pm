@@ -481,3 +481,7 @@ I got a message from the author saying that he doesn't intend to keep
 it going.
 
 =back
+
+=head1 REPOSITORY
+
+L<https://github.com/gnustavo/JIRA-REST>
