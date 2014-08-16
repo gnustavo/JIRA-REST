@@ -2,6 +2,14 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.006     2014-08-16 20:50:07 America/Sao_Paulo
+
+  [Changes]
+
+  - Suppress script line numbers from error messages.
+
+  - Released on #cpanday.
+
 0.005     2014-08-07 20:25:14 America/Sao_Paulo
 
   [Changes]
