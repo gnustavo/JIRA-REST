@@ -89,9 +89,12 @@ sub _error {
         $msg .= $content;
     } elsif ($type =~ m:application/json:) {
         my $error = $self->{json}->decode($content);
-        if (ref $error eq 'HASH' && exists $error->{errorMessages}) {
+        if (ref $error eq 'HASH') {
             foreach my $message (@{$error->{errorMessages}}) {
                 $msg .= "- $message\n";
+            }
+            if (exists $error->{errors}) {
+                $msg .= "- " . join(': ', (each %$error->{errors})) . "\n";
             }
         } else {
             $msg .= $content;
