@@ -2,7 +2,7 @@
 
 JIRA::REST - Thin wrapper around JIRA's REST API
 
-CAUTION - THIS IS STILL ALPHA CODE
+CAUTION - THIS IS STILL BETA CODE
 
 L<JIRA|http://www.atlassian.com/software/jira> is a proprietary bug
 tracking system from
@@ -15,7 +15,7 @@ API|http://docs.atlassian.com/software/jira/docs/api/rpc-jira-plugin/latest/com/
 for which there is another Perl module called
 L<JIRA::Client|http://search.cpan.org/dist/JIRA-Client/>.
 
-Copyright (c) 2013 by CPqD (http://www.cpqd.com.br/)
+Copyright (c) 2013-2014 by CPqD (http://www.cpqd.com.br/)
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
