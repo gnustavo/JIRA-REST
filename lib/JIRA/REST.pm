@@ -89,9 +89,23 @@ sub _error {
         $msg .= $content;
     } elsif ($type =~ m:application/json:) {
         my $error = $self->{json}->decode($content);
-        if (ref $error eq 'HASH' && exists $error->{errorMessages}) {
-            foreach my $message (@{$error->{errorMessages}}) {
-                $msg .= "- $message\n";
+        if (ref $error eq 'HASH') {
+            # JIRA errors may be laid out in all sorts of ways. You have to
+            # look them up from the scant documentation at
+            # https://docs.atlassian.com/jira/REST/latest/.
+
+            # /issue/bulk tucks the errors one level down, inside the
+            # 'elementErrors' hash.
+            $error = $error->{elementErrors} if exists $error->{elementErrors};
+
+            # Some methods tuck the errors in the 'errorMessages' array.
+            if (my $errorMessages = $error->{errorMessages}) {
+                $msg .= "- $_\n" foreach @$errorMessages;
+            }
+
+            # And some tuck them in the 'errors' hash.
+            if (my $errors = $error->{errors}) {
+                $msg .= "- [$_] $errors->{$_}\n" foreach sort keys %$errors;
             }
         } else {
             $msg .= $content;
