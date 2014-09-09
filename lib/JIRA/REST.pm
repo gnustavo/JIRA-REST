@@ -197,19 +197,21 @@ sub POST {
     return $self->_content();
 }
 
- sub set_search_iterator {
+sub set_search_iterator {
     my ($self, $params) = @_;
 
     my %params = ( %$params );  # rebuild the hash to own it
 
-    $params{startAt}    = 0;
-
-    my $results = $self->POST('/search', \%params);
+    $params{startAt} = 0;
 
     $self->{iter} = {
-        params  => \%params,    # params hash used in the previous call
-        results => $results,    # issues returned by the last call
-        offset  => 0,           # offset to be used in the next call
+        params  => \%params,    # params hash to be used in the next call
+        offset  => 0,           # offset of the next issue to be fetched
+        results => {            # results of the last call (this one is fake)
+            startAt => 0,
+            total   => -1,
+            issues  => [],
+        },
     };
 
     return;
@@ -222,17 +224,16 @@ sub next_issue {
         or croak $self->_error("You must call set_search_iterator before calling next_issue");
 
     if ($iter->{offset} == $iter->{results}{total}) {
-        if ($iter->{results}{startAt} + $iter->{offset} == $iter->{results}{maxResults}) {
-            $self->{iter} = undef;
-            return;
-        } else {
-            $iter->{params}{startAt} = $iter->{results}{startAt} + $iter->{offset};
-            $iter->{results}         = $self->POST('/search', $iter->{params});
-            $iter->{offset}          = 0;
-        }
+        # This is the end of the search results
+        $self->{iter} = undef;
+        return;
+    } elsif ($iter->{offset} == $iter->{results}{startAt} + @{$iter->{results}{issues}}) {
+        # Time to get the next bunch of issues
+        $iter->{params}{startAt} = $iter->{offset};
+        $iter->{results}         = $self->POST('/search', undef, $iter->{params});
     }
 
-    return $iter->{results}{issues}[$iter->{offset}++];
+    return $iter->{results}{issues}[$iter->{offset}++ - $iter->{results}{startAt}];
 }
 
 1;
@@ -458,8 +459,7 @@ Sets up an iterator for the search specified by the hash-ref PARAMS. It must
 be called before calls to B<next_issue>.
 
 PARAMS must conform with the query parameters allowed for the
-C</rest/api/2/search> JIRA REST endpoint. It may specify a C<maxResults>
-parameter. If not, a default of 256 will be used.
+C</rest/api/2/search> JIRA REST endpoint.
 
 =head2 B<next_issue>
 
