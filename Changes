@@ -2,6 +2,17 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.009     2014-09-09 20:32:15 America/Sao_Paulo
+
+  [Fixes]
+
+  - Fix the set_search_iterator/next_issue pair of methods.
+
+  [Changes]
+
+  - The iterators now use JIRA's own default (which is 50) when the
+    'maxResults' argument isn't set. Previously our default was set to 256.
+
 0.008     2014-09-06 19:14:06 America/Sao_Paulo
 
   [Changes]
