@@ -203,8 +203,6 @@ sub POST {
     my %params = ( %$params );  # rebuild the hash to own it
 
     $params{startAt}    = 0;
-    $params{maxResults} = 256
-        unless exists $params{maxResults};
 
     my $results = $self->POST('/search', \%params);
 
