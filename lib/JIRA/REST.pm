@@ -113,7 +113,7 @@ sub _error {
     } elsif ($type =~ m:text/html:i && eval {require HTML::TreeBuilder}) {
         $msg .= HTML::TreeBuilder->new_from_content($content)->as_text;
     } else {
-        $msg .= "<unconvertable Content-Type: '$type}'>";
+        $msg .= "<unconvertable Content-Type: '$type'>";
     };
     $msg =~ s/\n*$/\n/s;       # end message with a single newline
     return $msg;
