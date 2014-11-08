@@ -244,6 +244,30 @@ sub next_issue {
     return $iter->{results}{issues}[$iter->{offset}++ - $iter->{results}{startAt}];
 }
 
+sub attach_files {
+    my ($self, $issueIdOrKey, @files) = @_;
+
+    # We need to violate the REST::Client class encapsulation to implement
+    # the HTTP POST method necessary to invoke the /issue/key/attachments
+    # REST endpoint because it has to use the form-data Content-Type.
+
+    my $rest = $self->{rest};
+
+    # FIXME: How to attach all files at once?
+    foreach my $file (@files) {
+        my $response = $rest->getUseragent()->post(
+            $rest->getHost . "/issue/$issueIdOrKey/attachments",
+            %{$rest->{_headers}},
+            'X-Atlassian-Token' => 'nocheck',
+            'Content-Type'      => 'form-data',
+            'Content'           => [ file => [$file] ],
+        );
+
+        $response->is_success
+            or croak $self->_error("attach_files($file): " . $response->status_line);
+    }
+}
+
 1;
 
 
@@ -290,6 +314,9 @@ __END__
     while (my $issue = $jira->next_issue) {
         print "Found issue $issue->{key}\n";
     }
+
+    # Attach files using an utility method
+    $jira->attach_files('TST-123', '/path/to/doc.txt', 'image.png');
 
 =head1 DESCRIPTION
 
@@ -479,6 +506,13 @@ Using the set_search_iterator/next_issue utility methods you can iterate
 through large sets of issues without worrying about the startAt/total/offset
 attributes in the response from the /search REST endpoint. These methods
 implement the "paging" algorithm needed to work with those attributes.
+
+=head2 B<attach_files> ISSUE FILE...
+
+The C</issue/KEY/attachments> REST endpoint, used to attach files to issues,
+requires a specific content type encoding which is difficult to come up with
+just the C<REST::Client> interface. This utility method offers an easier
+interface to attach files to issues.
 
 =head1 SEE ALSO
 
