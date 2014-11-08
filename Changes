@@ -2,6 +2,17 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.010     2014-11-08 12:54:50 America/Sao_Paulo
+
+  [New features]
+
+  - Add utility method 'attach_files'.
+
+  [Changes]
+
+  - Prints any textual error message, not just of types text/plain and
+    text/html.
+
 0.009     2014-09-09 20:32:15 America/Sao_Paulo
 
   [Fixes]
