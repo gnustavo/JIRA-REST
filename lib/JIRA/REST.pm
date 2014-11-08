@@ -112,8 +112,10 @@ sub _error {
         }
     } elsif ($type =~ m:text/html:i && eval {require HTML::TreeBuilder}) {
         $msg .= HTML::TreeBuilder->new_from_content($content)->as_text;
+    } elsif ($type =~ m:^text/:i) {
+        $msg .= "<Content-Type: $type>$content</Content-Type>";
     } else {
-        $msg .= "<unconvertable Content-Type: '$type'>";
+        $msg .= "<Content-Type: $type>(binary content not shown)</Content-Type>";
     };
     $msg =~ s/\n*$/\n/s;       # end message with a single newline
     return $msg;
