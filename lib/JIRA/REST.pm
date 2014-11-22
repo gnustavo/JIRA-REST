@@ -112,7 +112,7 @@ sub _error {
         }
     } elsif ($type =~ m:text/html:i && eval {require HTML::TreeBuilder}) {
         $msg .= HTML::TreeBuilder->new_from_content($content)->as_text;
-    } elsif ($type =~ m:^text/:i) {
+    } elsif ($type =~ m:^(text/|application|xml):i) {
         $msg .= "<Content-Type: $type>$content</Content-Type>";
     } else {
         $msg .= "<Content-Type: $type>(binary content not shown)</Content-Type>";
