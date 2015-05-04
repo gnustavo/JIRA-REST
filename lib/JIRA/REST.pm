@@ -48,7 +48,21 @@ sub new {
     is_hash_ref($rest_client_config)
         or croak __PACKAGE__ . "::new: REST_CLIENT_CONFIG argument must be a hash-ref.\n";
 
+    # remove the REST::Client faux config value 'proxy' if set and use it
+    # ourselves.
+    my $proxy = delete $rest_client_config->{proxy};
+
+    if ($proxy) {
+        is_string($proxy) || is_instance($proxy, 'URI')
+            or croak __PACKAGE__ . "::new: 'proxy' rest client attribute must be a string or a URI object.\n";
+    }
+
     my $rest = REST::Client->new($rest_client_config);
+
+    # Set proxy to be used
+    if ($proxy) {
+        $rest->getUseragent->proxy(['http','https'] => $proxy);
+    }
 
     # Set default base URL
     $rest->setHost($URL);
@@ -369,6 +383,11 @@ A JIRA::REST object uses a REST::Client object to make the REST
 invocations. This optional argument must be a hash-ref that can be fed
 to the REST::Client constructor. Note that the C<URL> argument
 overwrites any value associated with the C<host> key in this hash.
+
+To use a network proxy please set the 'proxy' argument to the string or URI
+object describing the fully qualified (including port) URL to your network
+proxy. This is an extension to the REST::Client configuration and will be
+removed from the hash before passing it on to the REST::Client constructor.
 
 =back
 
