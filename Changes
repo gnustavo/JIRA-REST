@@ -2,6 +2,16 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.011     2015-05-21 19:10:57-03:00 America/Sao_Paulo
+
+  [New feature]
+
+  - Add support for connecting to JIRA via a HTTP proxy.
+
+  [Fix]
+
+  - Recognize and output JIRA errors produced in XML format.
+
 0.010     2014-11-08 12:54:50 America/Sao_Paulo
 
   [New features]
