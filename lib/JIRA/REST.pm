@@ -11,15 +11,19 @@ use URI;
 use MIME::Base64;
 use URI::Escape;
 use JSON;
-use Data::Util qw/:check/;
 use REST::Client;
 
 sub new {
     my ($class, $URL, $username, $password, $rest_client_config) = @_;
 
-    $URL = URI->new($URL) if is_string($URL);
-    is_instance($URL, 'URI')
-        or croak __PACKAGE__ . "::new: URL argument must be a string or a URI object.\n";
+    # Make sure $URL isa URI
+    if (! defined $URL) {
+        croak __PACKAGE__ . "::new: URL argument must be defined.\n";
+    } elsif (! ref $URL) {
+        $URL = URI->new($URL);
+    } elsif (! $URL->isa('URI')) {
+        croak __PACKAGE__ . "::new: URL argument must be an URI object.\n";
+    }
 
     # Choose the latest REST API unless already specified
     unless ($URL->path =~ m@/rest/api/(?:\d+|latest)/?$@) {
@@ -38,31 +42,26 @@ sub new {
         }
     }
 
-    is_string($username)
-        or croak __PACKAGE__ . "::new: USERNAME argument must be a string.\n";
+    croak __PACKAGE__ . "::new: USERNAME argument must be a string.\n"
+        unless defined $username && ! ref $username && length $username;
 
-    is_string($password)
-        or croak __PACKAGE__ . "::new: PASSWORD argument must be a string.\n";
+    croak __PACKAGE__ . "::new: PASSWORD argument must be a string.\n"
+        unless defined $password && ! ref $password && length $password;
 
     $rest_client_config = {} unless defined $rest_client_config;
-    is_hash_ref($rest_client_config)
-        or croak __PACKAGE__ . "::new: REST_CLIENT_CONFIG argument must be a hash-ref.\n";
+    croak __PACKAGE__ . "::new: REST_CLIENT_CONFIG argument must be a hash-ref.\n"
+        unless
+        defined $rest_client_config
+        &&  ref $rest_client_config
+        &&  ref $rest_client_config eq 'HASH';
 
-    # remove the REST::Client faux config value 'proxy' if set and use it
-    # ourselves.
+    # remove the REST::Client faux config 'proxy' if set and use it later.
     my $proxy = delete $rest_client_config->{proxy};
-
-    if ($proxy) {
-        is_string($proxy) || is_instance($proxy, 'URI')
-            or croak __PACKAGE__ . "::new: 'proxy' rest client attribute must be a string or a URI object.\n";
-    }
 
     my $rest = REST::Client->new($rest_client_config);
 
     # Set proxy to be used
-    if ($proxy) {
-        $rest->getUseragent->proxy(['http','https'] => $proxy);
-    }
+    $rest->getUseragent->proxy(['http','https'] => $proxy) if $proxy;
 
     # Set default base URL
     $rest->setHost($URL);
@@ -162,7 +161,8 @@ sub _content {
 sub _build_query {
     my ($self, $query) = @_;
 
-    is_hash_ref($query) or croak $self->_error("The QUERY argument must be a hash-ref.");
+    croak $self->_error("The QUERY argument must be a hash-ref.")
+        unless defined $query && ref $query && ref $query eq 'HASH';
 
     return '?'. join('&', map {$_ . '=' . uri_escape($query->{$_})} keys %$query);
 }
