@@ -2,6 +2,12 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.012     2016-01-15 22:16:02-02:00 America/Sao_Paulo
+
+  [Fix]
+
+  - Remove dependency on Data::Util.
+
 0.011     2015-05-21 19:10:57-03:00 America/Sao_Paulo
 
   [New feature]
