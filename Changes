@@ -2,6 +2,11 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+  [Changes]
+
+  - Downgrade Perl version requirement from 5.10 to 5.8.8 to enable use on
+    older Perls.
+
 0.013     2016-11-22 16:01:45-02:00 America/Sao_Paulo
 
   [New feature]

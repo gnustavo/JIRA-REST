@@ -1,7 +1,7 @@
 package JIRA::REST;
 # ABSTRACT: Thin wrapper around JIRA's REST API
 
-use 5.010;
+use 5.008_008;
 use utf8;
 use strict;
 use warnings;
@@ -237,8 +237,8 @@ sub PUT {
 
     $path .= $self->_build_query($query) if $query;
 
-    $headers                   //= {};
-    $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
+    $headers                   ||= {};
+    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8' unless defined $headers->{'Content-Type'};
 
     $self->{rest}->PUT($path, $self->{json}->encode($value), $headers);
 
@@ -253,8 +253,8 @@ sub POST {
 
     $path .= $self->_build_query($query) if $query;
 
-    $headers                   //= {};
-    $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
+    $headers                   ||= {};
+    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8' unless defined $headers->{'Content-Type'};
 
     $self->{rest}->POST($path, $self->{json}->encode($value), $headers);
 
