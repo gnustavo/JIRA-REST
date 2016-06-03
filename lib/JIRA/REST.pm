@@ -26,7 +26,7 @@ sub new {
     }
 
     # Choose the latest REST API unless already specified
-    unless ($URL->path =~ m@/rest/api/(?:\d+|latest)/?$@) {
+    unless ($URL->path =~ m@/rest/(?:api|servicedeskapi|agile)(?:/\d+/?|/latest/?)?$@) {
         $URL->path($URL->path . '/rest/api/latest');
     }
 
