@@ -30,16 +30,9 @@ sub new {
         $URL->path($URL->path . '/rest/api/latest');
     }
 
-    # If no password is set we try to lookup the credentials in the .netrc file
-    if (! defined $password) {
-        eval {require Net::Netrc}
-            or croak "Can't require Net::Netrc module. Please, specify the USERNAME and PASSWORD.\n";
-        if (my $machine = Net::Netrc->lookup($URL->host, $username)) { # $username may be undef
-            $username = $machine->login;
-            $password = $machine->password;
-        } else {
-            croak "No credentials found in the .netrc file.\n";
-        }
+    # If username and password are not set we try to lookup the credentials
+    if (! defined $username || ! defined $password) {
+        ($username, $password) = _search_for_credentials($URL, $username);
     }
 
     croak __PACKAGE__ . "::new: USERNAME argument must be a string.\n"
@@ -80,6 +73,55 @@ sub new {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
     } => $class;
+}
+
+sub _search_for_credentials {
+    my ($URL, $username) = @_;
+    my (@errors, $password);
+
+    # Try .netrc first
+    ($username, $password) = eval { _user_pass_from_netrc($URL, $username) };
+    push @errors, "Net::Netrc: $@" if $@;
+    return ($username, $password) if defined $username && defined $password;
+
+    # Fallback to Config::Identity
+    my $stub = $ENV{JIRA_REST_IDENTITY} || "jira";
+    ($username, $password) = eval { _user_pass_from_config_identity($stub) };
+    push @errors, "Config::Identity: $@" if $@;
+    return ($username, $password) if defined $username && defined $password;
+
+    # Still not defined, so we report errors
+    for (@errors) {
+        chomp;
+        s/\n//g;
+        s/ at \S+ line \d+.*//;
+    }
+    croak __PACKAGE__ . "::new: Could not locate credentials. Tried these modules:\n"
+        . join("", map { "* $_\n" } @errors)
+        . "Please specify the USERNAME and PASSWORD as arguments to new";
+}
+
+sub _user_pass_from_config_identity {
+    my ($stub) = @_;
+    my ($username, $password);
+    eval {require Config::Identity; Config::Identity->VERSION(0.0019) }
+        or croak "Can't load Config::Identity 0.0019 or later.\n";
+    my %id = Config::Identity->load_check( $stub, [qw/username password/] );
+    return ($id{username}, $id{password});
+}
+
+sub _user_pass_from_netrc {
+    my ($URL, $username) = @_;
+    my $password;
+    eval {require Net::Netrc; 1}
+        or croak "Can't require Net::Netrc module.";
+    if (my $machine = Net::Netrc->lookup($URL->host, $username)) { # $username may be undef
+        $username = $machine->login;
+        $password = $machine->password;
+    } else {
+        croak "No credentials found in the .netrc file.\n";
+    }
+    return ($username, $password);
 }
 
 sub _error {
@@ -367,7 +409,12 @@ appended automatically to the URL.
 The username of a JIRA user.
 
 It can be undefined if PASSWORD is also undefined. In such a case the
-user credentials are looked up in the C<.netrc> file.
+user credentials are looked up in the C<.netrc> file or via
+L<Config::Identity> (which allows C<gpg> encrypted credentials).
+
+L<Config::Identity> will look for F<~/.jira-identity> or F<~/.jira>.
+You can change the filename stub from C<jira> to a custom stub with the
+C<JIRA_REST_IDENTITY> environment variable.
 
 =item * PASSWORD
 
@@ -375,7 +422,7 @@ The HTTP password of the user. (This is the password the user uses to
 log in to JIRA's web interface.)
 
 It can be undefined, in which case the user credentials are looked up
-in the C<.netrc> file.
+in the C<.netrc> file or via L<Config::Identity>.
 
 =item * REST_CLIENT_CONFIG
 
