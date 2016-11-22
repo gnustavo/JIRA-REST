@@ -2,6 +2,8 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.013     2016-11-22 16:01:45-02:00 America/Sao_Paulo
+
   [New feature]
 
   - Add support for getting username and password from Config::Identity,
