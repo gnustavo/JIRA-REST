@@ -2,6 +2,11 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+  [New feature]
+
+  - Add support for getting username and password from Config::Identity,
+    which supports gpg encrypted credentials.
+
 0.012     2016-01-15 22:16:02-02:00 America/Sao_Paulo
 
   [Fix]
