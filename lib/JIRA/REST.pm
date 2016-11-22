@@ -25,10 +25,10 @@ sub new {
         croak __PACKAGE__ . "::new: URL argument must be an URI object.\n";
     }
 
-    # Choose the latest REST API unless already specified
-    unless ($URL->path =~ m@/rest/api/(?:\d+|latest)/?$@) {
-        $URL->path($URL->path . '/rest/api/latest');
-    }
+    # See if the user wants a specific JIRA Core REST API version:
+    my $path = $URL->path('') || '/rest/api/latest';
+    $path =~ m@^/rest/api/(?:latest|\d+)$@
+        or croak __PACKAGE__ . "::new: invalid path in URL: '$path'\n";
 
     # If username and password are not set we try to lookup the credentials
     if (! defined $username || ! defined $password) {
@@ -72,6 +72,7 @@ sub new {
     return bless {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
+        path => $path,
     } => $class;
 }
 
@@ -200,21 +201,24 @@ sub _content {
     }
 }
 
-sub _build_query {
-    my ($self, $query) = @_;
+sub _build_path {
+    my ($self, $path, $query) = @_;
 
-    croak $self->_error("The QUERY argument must be a hash-ref.")
-        unless defined $query && ref $query && ref $query eq 'HASH';
+    $path = $self->{path} . $path unless $path =~ m:^/rest/:;
 
-    return '?'. join('&', map {$_ . '=' . uri_escape($query->{$_})} keys %$query);
+    if (defined $query) {
+        croak $self->_error("The QUERY argument must be a hash-ref.")
+            unless ref $query && ref $query eq 'HASH';
+        return $path . '?'. join('&', map {$_ . '=' . uri_escape($query->{$_})} keys %$query);
+    } else {
+        return $path;
+    }
 }
 
 sub GET {
     my ($self, $path, $query) = @_;
 
-    $path .= $self->_build_query($query) if $query;
-
-    $self->{rest}->GET($path);
+    $self->{rest}->GET($self->_build_path($path, $query));
 
     return $self->_content();
 }
@@ -222,9 +226,7 @@ sub GET {
 sub DELETE {
     my ($self, $path, $query) = @_;
 
-    $path .= $self->_build_query($query) if $query;
-
-    $self->{rest}->DELETE($path);
+    $self->{rest}->DELETE($self->_build_path($path, $query));
 
     return $self->_content();
 }
@@ -235,10 +237,11 @@ sub PUT {
     defined $value
         or croak $self->_error("PUT method's 'value' argument is undefined.");
 
-    $path .= $self->_build_query($query) if $query;
+    $path = $self->_build_path($path, $query);
 
     $headers                   ||= {};
-    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8' unless defined $headers->{'Content-Type'};
+    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8'
+        unless defined $headers->{'Content-Type'};
 
     $self->{rest}->PUT($path, $self->{json}->encode($value), $headers);
 
@@ -251,10 +254,11 @@ sub POST {
     defined $value
         or croak $self->_error("POST method's 'value' argument is undefined.");
 
-    $path .= $self->_build_query($query) if $query;
+    $path = $self->_build_path($path, $query);
 
     $headers                   ||= {};
-    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8' unless defined $headers->{'Content-Type'};
+    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8'
+        unless defined $headers->{'Content-Type'};
 
     $self->{rest}->POST($path, $self->{json}->encode($value), $headers);
 
@@ -379,12 +383,29 @@ __END__
 L<JIRA|http://www.atlassian.com/software/jira/> is a proprietary bug
 tracking system from Atlassian.
 
-This module implements a very thin wrapper around L<JIRA's REST
-API|https://docs.atlassian.com/jira/REST/latest/> which is superseding
-it's old L<SOAP
+This module implements a very thin wrapper around JIRA's REST APIs:
+
+=over
+
+=item * L<JIRA Core REST API|https://docs.atlassian.com/jira/REST/server/>
+
+This rich API superseded the old L<JIRA SOAP
 API|http://docs.atlassian.com/software/jira/docs/api/rpc-jira-plugin/latest/com/atlassian/jira/rpc/soap/JiraSoapService.html>
-for which there is another Perl module called
-L<JIRA::Client|http://search.cpan.org/dist/JIRA-Client/>.
+which isn't supported anymore as of JIRA version 7.
+
+The endpoints of this API have a path prefix of C</rest/api/VERSION>.
+
+=item * L<JIRA Service Desk REST API|https://docs.atlassian.com/jira-servicedesk/REST/server/>
+
+This API deals with the objects of the JIRA Service Desk application. Its
+endpoints have a path prefix of C</rest/servicedeskapi>.
+
+=item * L<JIRA Software REST API|https://docs.atlassian.com/jira-software/REST/server/>
+
+This API deals with the objects of the JIRA Software application. Its
+endpoints have a path prefix of C</rest/agile/VERSION>.
+
+=back
 
 =head1 CONSTRUCTOR
 
@@ -399,10 +420,17 @@ The constructor needs up to four arguments:
 A string or a URI object denoting the base URL of the JIRA
 server. This is a required argument.
 
-You may choose a specific API version by appending the
-C</rest/api/VERSION> string to the URL's path. It's more common to
-left it unspecified, in which case the C</rest/api/latest> string is
-appended automatically to the URL.
+The REST methods described below all accept as a first argument the
+endpoint's path of the specific API method to call. In general you can pass
+the complete path, beginning with the prefix denoting the particular API to
+use (C</rest/api/VERSION>, C</rest/servicedeskapi>, or
+C</rest/agile/VERSION>). However, to make it easier to invoke JIRA's Core
+API if you pass a path not starting with C</rest/> it will be prefixed with
+C</rest/api/latest> or with this URL's path if it has one. This way you can
+choose a specific version of the JIRA Core API to use instead of the latest
+one. For example:
+
+    my $jira = JIRA::REST->new('https://jira.example.net/rest/api/1', 'myuser', 'mypass');
 
 =item * USERNAME
 
@@ -452,12 +480,14 @@ All four methods need two arguments:
 
 =item * RESOURCE
 
-This is the resource's 'path', minus the API version prefix. For
-example, in order to GET the list of all fields, you must pass simply
-C</field>, not C</rest/api/latest/field>, and in order to get a list
-of all the components of a project, you must pass simply
-C</project/$key/components>, not
-C</rest/api/latest/project/$key/components>.
+This is the resource's 'path'. For example, in order to GET the list of all
+fields, you pass C</rest/api/latest/field>, and in order to get SLA
+information about an issue you pass
+C</rest/servicedeskapi/request/$key/sla>.
+
+If you're using a method form JIRA Core REST API you may ommit the prefix
+C</rest/api/VERSION>. For example, to GET the list of all fields you may
+pass just C</field>.
 
 This argument is required.
 
@@ -587,11 +617,6 @@ interface to attach files to issues.
 =item * C<REST::Client>
 
 JIRA::REST uses a REST::Client object to perform the low-level interactions.
-
-=item * C<JIRA::Client>
-
-JIRA::Client is another Perl module implementing the other JIRA
-API based on SOAP.
 
 =item * C<JIRA::Client::REST>
 
