@@ -2,6 +2,8 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.014     2016-11-23 07:27:52-02:00 America/Sao_Paulo
+
   [New feature]
 
   - JIRA::REST now supports the JIRA Software REST API and the JIRA Service
