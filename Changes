@@ -2,6 +2,28 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.014     2016-11-23 07:27:52-02:00 America/Sao_Paulo
+
+  [New feature]
+
+  - JIRA::REST now supports the JIRA Software REST API and the JIRA Service
+    Desk REST API in addition to the JIRA Core REST API with a minimal
+    change. How cool is that!?
+
+    Many thanks Evan Brown for such a nice idea.
+
+  [Changes]
+
+  - Downgrade Perl version requirement from 5.10 to 5.8.8 to enable use on
+    older Perls.
+
+0.013     2016-11-22 16:01:45-02:00 America/Sao_Paulo
+
+  [New feature]
+
+  - Add support for getting username and password from Config::Identity,
+    which supports gpg encrypted credentials.
+
 0.012     2016-01-15 22:16:02-02:00 America/Sao_Paulo
 
   [Fix]

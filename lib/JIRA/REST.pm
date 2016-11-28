@@ -1,7 +1,7 @@
 package JIRA::REST;
 # ABSTRACT: Thin wrapper around JIRA's REST API
 
-use 5.010;
+use 5.008_008;
 use utf8;
 use strict;
 use warnings;
@@ -25,21 +25,14 @@ sub new {
         croak __PACKAGE__ . "::new: URL argument must be an URI object.\n";
     }
 
-    # Choose the latest REST API unless already specified
-    unless ($URL->path =~ m@/rest/(?:api|servicedeskapi|agile)(?:/\d+/?|/latest/?)?$@) {
-        $URL->path($URL->path . '/rest/api/latest');
-    }
+    # See if the user wants a specific JIRA Core REST API version:
+    my $path = $URL->path('') || '/rest/api/latest';
+    $path =~ m@^/rest/api/(?:latest|\d+)$@
+        or croak __PACKAGE__ . "::new: invalid path in URL: '$path'\n";
 
-    # If no password is set we try to lookup the credentials in the .netrc file
-    if (! defined $password) {
-        eval {require Net::Netrc}
-            or croak "Can't require Net::Netrc module. Please, specify the USERNAME and PASSWORD.\n";
-        if (my $machine = Net::Netrc->lookup($URL->host, $username)) { # $username may be undef
-            $username = $machine->login;
-            $password = $machine->password;
-        } else {
-            croak "No credentials found in the .netrc file.\n";
-        }
+    # If username and password are not set we try to lookup the credentials
+    if (! defined $username || ! defined $password) {
+        ($username, $password) = _search_for_credentials($URL, $username);
     }
 
     croak __PACKAGE__ . "::new: USERNAME argument must be a string.\n"
@@ -79,7 +72,57 @@ sub new {
     return bless {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
+        path => $path,
     } => $class;
+}
+
+sub _search_for_credentials {
+    my ($URL, $username) = @_;
+    my (@errors, $password);
+
+    # Try .netrc first
+    ($username, $password) = eval { _user_pass_from_netrc($URL, $username) };
+    push @errors, "Net::Netrc: $@" if $@;
+    return ($username, $password) if defined $username && defined $password;
+
+    # Fallback to Config::Identity
+    my $stub = $ENV{JIRA_REST_IDENTITY} || "jira";
+    ($username, $password) = eval { _user_pass_from_config_identity($stub) };
+    push @errors, "Config::Identity: $@" if $@;
+    return ($username, $password) if defined $username && defined $password;
+
+    # Still not defined, so we report errors
+    for (@errors) {
+        chomp;
+        s/\n//g;
+        s/ at \S+ line \d+.*//;
+    }
+    croak __PACKAGE__ . "::new: Could not locate credentials. Tried these modules:\n"
+        . join("", map { "* $_\n" } @errors)
+        . "Please specify the USERNAME and PASSWORD as arguments to new";
+}
+
+sub _user_pass_from_config_identity {
+    my ($stub) = @_;
+    my ($username, $password);
+    eval {require Config::Identity; Config::Identity->VERSION(0.0019) }
+        or croak "Can't load Config::Identity 0.0019 or later.\n";
+    my %id = Config::Identity->load_check( $stub, [qw/username password/] );
+    return ($id{username}, $id{password});
+}
+
+sub _user_pass_from_netrc {
+    my ($URL, $username) = @_;
+    my $password;
+    eval {require Net::Netrc; 1}
+        or croak "Can't require Net::Netrc module.";
+    if (my $machine = Net::Netrc->lookup($URL->host, $username)) { # $username may be undef
+        $username = $machine->login;
+        $password = $machine->password;
+    } else {
+        croak "No credentials found in the .netrc file.\n";
+    }
+    return ($username, $password);
 }
 
 sub _error {
@@ -158,21 +201,24 @@ sub _content {
     }
 }
 
-sub _build_query {
-    my ($self, $query) = @_;
+sub _build_path {
+    my ($self, $path, $query) = @_;
 
-    croak $self->_error("The QUERY argument must be a hash-ref.")
-        unless defined $query && ref $query && ref $query eq 'HASH';
+    $path = $self->{path} . $path unless $path =~ m:^/rest/:;
 
-    return '?'. join('&', map {$_ . '=' . uri_escape($query->{$_})} keys %$query);
+    if (defined $query) {
+        croak $self->_error("The QUERY argument must be a hash-ref.")
+            unless ref $query && ref $query eq 'HASH';
+        return $path . '?'. join('&', map {$_ . '=' . uri_escape($query->{$_})} keys %$query);
+    } else {
+        return $path;
+    }
 }
 
 sub GET {
     my ($self, $path, $query) = @_;
 
-    $path .= $self->_build_query($query) if $query;
-
-    $self->{rest}->GET($path);
+    $self->{rest}->GET($self->_build_path($path, $query));
 
     return $self->_content();
 }
@@ -180,9 +226,7 @@ sub GET {
 sub DELETE {
     my ($self, $path, $query) = @_;
 
-    $path .= $self->_build_query($query) if $query;
-
-    $self->{rest}->DELETE($path);
+    $self->{rest}->DELETE($self->_build_path($path, $query));
 
     return $self->_content();
 }
@@ -193,10 +237,11 @@ sub PUT {
     defined $value
         or croak $self->_error("PUT method's 'value' argument is undefined.");
 
-    $path .= $self->_build_query($query) if $query;
+    $path = $self->_build_path($path, $query);
 
-    $headers                   //= {};
-    $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
+    $headers                   ||= {};
+    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8'
+        unless defined $headers->{'Content-Type'};
 
     $self->{rest}->PUT($path, $self->{json}->encode($value), $headers);
 
@@ -209,10 +254,11 @@ sub POST {
     defined $value
         or croak $self->_error("POST method's 'value' argument is undefined.");
 
-    $path .= $self->_build_query($query) if $query;
+    $path = $self->_build_path($path, $query);
 
-    $headers                   //= {};
-    $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
+    $headers                   ||= {};
+    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8'
+        unless defined $headers->{'Content-Type'};
 
     $self->{rest}->POST($path, $self->{json}->encode($value), $headers);
 
@@ -337,12 +383,29 @@ __END__
 L<JIRA|http://www.atlassian.com/software/jira/> is a proprietary bug
 tracking system from Atlassian.
 
-This module implements a very thin wrapper around L<JIRA's REST
-API|https://docs.atlassian.com/jira/REST/latest/> which is superseding
-it's old L<SOAP
+This module implements a very thin wrapper around JIRA's REST APIs:
+
+=over
+
+=item * L<JIRA Core REST API|https://docs.atlassian.com/jira/REST/server/>
+
+This rich API superseded the old L<JIRA SOAP
 API|http://docs.atlassian.com/software/jira/docs/api/rpc-jira-plugin/latest/com/atlassian/jira/rpc/soap/JiraSoapService.html>
-for which there is another Perl module called
-L<JIRA::Client|http://search.cpan.org/dist/JIRA-Client/>.
+which isn't supported anymore as of JIRA version 7.
+
+The endpoints of this API have a path prefix of C</rest/api/VERSION>.
+
+=item * L<JIRA Service Desk REST API|https://docs.atlassian.com/jira-servicedesk/REST/server/>
+
+This API deals with the objects of the JIRA Service Desk application. Its
+endpoints have a path prefix of C</rest/servicedeskapi>.
+
+=item * L<JIRA Software REST API|https://docs.atlassian.com/jira-software/REST/server/>
+
+This API deals with the objects of the JIRA Software application. Its
+endpoints have a path prefix of C</rest/agile/VERSION>.
+
+=back
 
 =head1 CONSTRUCTOR
 
@@ -357,17 +420,29 @@ The constructor needs up to four arguments:
 A string or a URI object denoting the base URL of the JIRA
 server. This is a required argument.
 
-You may choose a specific API version by appending the
-C</rest/api/VERSION> string to the URL's path. It's more common to
-left it unspecified, in which case the C</rest/api/latest> string is
-appended automatically to the URL.
+The REST methods described below all accept as a first argument the
+endpoint's path of the specific API method to call. In general you can pass
+the complete path, beginning with the prefix denoting the particular API to
+use (C</rest/api/VERSION>, C</rest/servicedeskapi>, or
+C</rest/agile/VERSION>). However, to make it easier to invoke JIRA's Core
+API if you pass a path not starting with C</rest/> it will be prefixed with
+C</rest/api/latest> or with this URL's path if it has one. This way you can
+choose a specific version of the JIRA Core API to use instead of the latest
+one. For example:
+
+    my $jira = JIRA::REST->new('https://jira.example.net/rest/api/1', 'myuser', 'mypass');
 
 =item * USERNAME
 
 The username of a JIRA user.
 
 It can be undefined if PASSWORD is also undefined. In such a case the
-user credentials are looked up in the C<.netrc> file.
+user credentials are looked up in the C<.netrc> file or via
+L<Config::Identity> (which allows C<gpg> encrypted credentials).
+
+L<Config::Identity> will look for F<~/.jira-identity> or F<~/.jira>.
+You can change the filename stub from C<jira> to a custom stub with the
+C<JIRA_REST_IDENTITY> environment variable.
 
 =item * PASSWORD
 
@@ -375,7 +450,7 @@ The HTTP password of the user. (This is the password the user uses to
 log in to JIRA's web interface.)
 
 It can be undefined, in which case the user credentials are looked up
-in the C<.netrc> file.
+in the C<.netrc> file or via L<Config::Identity>.
 
 =item * REST_CLIENT_CONFIG
 
@@ -405,12 +480,14 @@ All four methods need two arguments:
 
 =item * RESOURCE
 
-This is the resource's 'path', minus the API version prefix. For
-example, in order to GET the list of all fields, you must pass simply
-C</field>, not C</rest/api/latest/field>, and in order to get a list
-of all the components of a project, you must pass simply
-C</project/$key/components>, not
-C</rest/api/latest/project/$key/components>.
+This is the resource's 'path'. For example, in order to GET the list of all
+fields, you pass C</rest/api/latest/field>, and in order to get SLA
+information about an issue you pass
+C</rest/servicedeskapi/request/$key/sla>.
+
+If you're using a method form JIRA Core REST API you may ommit the prefix
+C</rest/api/VERSION>. For example, to GET the list of all fields you may
+pass just C</field>.
 
 This argument is required.
 
@@ -540,11 +617,6 @@ interface to attach files to issues.
 =item * C<REST::Client>
 
 JIRA::REST uses a REST::Client object to perform the low-level interactions.
-
-=item * C<JIRA::Client>
-
-JIRA::Client is another Perl module implementing the other JIRA
-API based on SOAP.
 
 =item * C<JIRA::Client::REST>
 
