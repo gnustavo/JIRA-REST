@@ -27,7 +27,7 @@ sub new {
 
     # See if the user wants a specific JIRA Core REST API version:
     my $path = $URL->path('') || '/rest/api/latest';
-    $path =~ m@^/rest/api/(?:latest|\d+)$@
+    $path =~ m@api/(?:latest|\d+)$@
         or croak __PACKAGE__ . "::new: invalid path in URL: '$path'\n";
 
     # If username and password are not set we try to lookup the credentials
