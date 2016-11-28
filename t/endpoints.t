@@ -8,7 +8,9 @@ my $module = 'JIRA::REST';
 use_ok $module;
 
 my $endpoints = [
-    'https://example.com', 'https://example.com/wiki/rest/api/latest',
+    'https://example.com',
+    'https://example.com/wiki/rest/api/latest',
+    'https://example.com/wiki/rest/agile/latest',
     'https://example.com/rest/servicedeskapi/latest',
 ];
 
