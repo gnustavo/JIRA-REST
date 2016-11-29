@@ -204,7 +204,7 @@ sub _content {
 sub _build_path {
     my ($self, $path, $query) = @_;
 
-    $path = $self->{path} . $path unless $path =~ m:^/rest/:;
+    $path = $self->{path} . $path unless $path =~ m:/rest/:;
 
     if (defined $query) {
         croak $self->_error("The QUERY argument must be a hash-ref.")
