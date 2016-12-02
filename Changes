@@ -2,6 +2,13 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.015     2016-12-02 14:08:34-02:00 America/Sao_Paulo
+
+  [Fix]
+
+  - [RT#119092] v0.014 introduced an error making the constructor reject
+    URLs ending in slash.
+
 0.014     2016-11-23 07:27:52-02:00 America/Sao_Paulo
 
   [New feature]
