@@ -14,7 +14,41 @@ use JSON;
 use REST::Client;
 
 sub new {
-    my ($class, $URL, $username, $password, $rest_client_config) = @_;
+    my $class = shift; # this always has to come first!
+
+    my ($URL, $username, $password, $rest_client_config, $anonymous);
+    if (@_ > 1 || ! ref $_[0] || ref $_[0] ne 'HASH') {
+        # either we were passed more than one argument, or the
+        # one argument we were passed isn't a hash reference, so
+        # we are assuming that the new() method was called using
+        # the old "unnamed parameters" interface
+
+        ($URL, $username, $password, $rest_client_config) = @_;
+    }
+    else {
+        # we were passed a hash reference, so let's use that
+        # to identify the arguments
+        my($args) = @_;
+
+        while ( my($arg, $value) = each %$args ) {
+          SWITCH:
+            foreach (lc $arg) {
+                /^url$/ && do {
+                    $URL = $value;                last SWITCH; };
+                /^username$/ && do {
+                    $username = $value;           last SWITCH; };
+                /^password$/ && do {
+                    $password = $value;           last SWITCH; };
+                /^rest_client_config$/ && do {
+                    $rest_client_config = $value; last SWITCH; };
+                /^anonymous$/ && do {
+                    $anonymous = $value;          last SWITCH; };
+
+                # we don't recognize the argument we're being passed
+                croak __PACKAGE__ . "->new: unknown argument '$arg'";
+            } # SWITCH
+        }
+    }
 
     # Make sure $URL isa URI
     if (! defined $URL) {
@@ -33,16 +67,18 @@ sub new {
         croak __PACKAGE__ . "::new: invalid path in URL: '$path'\n";
     }
 
-    # If username and password are not set we try to lookup the credentials
-    if (! defined $username || ! defined $password) {
-        ($username, $password) = _search_for_credentials($URL, $username);
+    unless ($anonymous) {
+        # If username and password are not set we try to lookup the credentials
+        if (! defined $username || ! defined $password) {
+            ($username, $password) = _search_for_credentials($URL, $username);
+        }
+
+        croak __PACKAGE__ . "::new: USERNAME argument must be a string.\n"
+            unless defined $username && ! ref $username && length $username;
+
+        croak __PACKAGE__ . "::new: PASSWORD argument must be a string.\n"
+            unless defined $password && ! ref $password && length $password;
     }
-
-    croak __PACKAGE__ . "::new: USERNAME argument must be a string.\n"
-        unless defined $username && ! ref $username && length $username;
-
-    croak __PACKAGE__ . "::new: PASSWORD argument must be a string.\n"
-        unless defined $password && ! ref $password && length $password;
 
     $rest_client_config = {} unless defined $rest_client_config;
     croak __PACKAGE__ . "::new: REST_CLIENT_CONFIG argument must be a hash-ref.\n"
@@ -67,7 +103,8 @@ sub new {
 
     # Since JIRA doesn't send an authentication chalenge, we may
     # simply force the sending of the authentication header.
-    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$username:$password"));
+    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$username:$password"))
+        unless $anonymous;
 
     # Configure UserAgent name
     $rest->getUseragent->agent(__PACKAGE__);
@@ -340,7 +377,11 @@ __END__
 
     use JIRA::REST;
 
-    my $jira = JIRA::REST->new('https://jira.example.net', 'myuser', 'mypass');
+    my $jira = JIRA::REST->new({
+        URL      => 'https://jira.example.net',
+        username => 'myuser',
+        password => 'mypass,
+    }');
 
     # File a bug
     my $issue = $jira->POST('/issue', undef, {
@@ -412,13 +453,21 @@ endpoints have a path prefix of C</rest/agile/VERSION>.
 
 =head1 CONSTRUCTOR
 
-=head2 new URL, USERNAME, PASSWORD [, REST_CLIENT_CONFIG]
+=head2 new [URL, USERNAME, PASSWORD [, REST_CLIENT_CONFIG] | CONFIG HASHREF]
 
-The constructor needs up to four arguments:
+The constructor can either take up to four I<unnamed> arguments, in the order
 
-=over
+  URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG
 
-=item * URL
+or it can accept a single hash reference with keys indicating the names of the
+parameters.  If a has reference is used, the parameters can be specified in any
+order.
+
+The constructor accepts the following arguments:
+
+=over 4
+
+=item * B<URL>
 
 A string or a URI object denoting the base URL of the JIRA
 server. This is a required argument.
@@ -433,27 +482,37 @@ C</rest/api/latest> or with this URL's path if it has one. This way you can
 choose a specific version of the JIRA Core API to use instead of the latest
 one. For example:
 
-    my $jira = JIRA::REST->new('https://jira.example.net/rest/api/1', 'myuser', 'mypass');
+    my $jira = JIRA::REST->new({
+        URL => 'https://jira.example.net/rest/api/1',
+    });
 
-=item * USERNAME
+=item * B<username>
 
 The username of a JIRA user.
 
-It can be undefined if PASSWORD is also undefined. In such a case the
-user credentials are looked up in the C<.netrc> file or via
-L<Config::Identity> (which allows C<gpg> encrypted credentials).
+It can be undefined if B<password> is also undefined. In this a case (and if
+the B<anonymous> argument is not set to true) the module looks up the user
+credentials in either the C<.netrc> file or via L<Config::Identity> (which
+allows C<gpg> encrypted credentials).
 
 L<Config::Identity> will look for F<~/.jira-identity> or F<~/.jira>.
 You can change the filename stub from C<jira> to a custom stub with the
 C<JIRA_REST_IDENTITY> environment variable.
 
-=item * PASSWORD
+=item * B<password>
 
 The HTTP password of the user. (This is the password the user uses to
 log in to JIRA's web interface.)
 
-It can be undefined, in which case the user credentials are looked up
-in the C<.netrc> file or via L<Config::Identity>.
+It can be undefined, in which case (if the B<anonymous> argument is not set to
+true) the module looks up the user credentials in either the C<.netrc> file or
+via L<Config::Identity>.
+
+=item * B<anonymous>
+
+Tells the module that you want to connect to the specified JIRA server with no
+username or password.  This way you can access public JIRA servers without
+needing to authenticate.
 
 =item * REST_CLIENT_CONFIG
 
