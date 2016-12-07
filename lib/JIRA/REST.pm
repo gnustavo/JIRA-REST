@@ -90,10 +90,19 @@ sub new {
     # remove the REST::Client faux config 'proxy' if set and use it later.
     my $proxy = delete $rest_client_config->{proxy};
 
+    # remove the REST::Client faux config 'ssl_verify_none' if set
+    # and use it later.
+    my $ssl_verify_none = delete $rest_client_config->{ssl_verify_none};
+
     my $rest = REST::Client->new($rest_client_config);
 
     # Set proxy to be used
     $rest->getUseragent->proxy(['http','https'] => $proxy) if $proxy;
+
+    # allow SSL verification to be turned off when the JIRA server has
+    # self-signed certificates
+    $rest->getUseragent()->ssl_opts( SSL_verify_mode => 0,
+                                     verify_hostname => 0 ) if $ssl_verify_none;
 
     # Set default base URL
     $rest->setHost($URL);
@@ -516,15 +525,27 @@ needing to authenticate.
 
 =item * REST_CLIENT_CONFIG
 
-A JIRA::REST object uses a REST::Client object to make the REST
-invocations. This optional argument must be a hash-ref that can be fed
+A JIRA::REST object uses a L<REST::Client> object to make the REST
+invocations. This optional argument must be a hash reference that can be fed
 to the REST::Client constructor. Note that the C<URL> argument
 overwrites any value associated with the C<host> key in this hash.
 
+The hash reference also allows two additional arguments that are extensions to the REST::Client configuration and will be removed from the hash before passing it on to the REST::Client constructor:
+
+=over 4
+
+=item + B<proxy>
+
 To use a network proxy please set the 'proxy' argument to the string or URI
 object describing the fully qualified (including port) URL to your network
-proxy. This is an extension to the REST::Client configuration and will be
-removed from the hash before passing it on to the REST::Client constructor.
+proxy.
+
+=item + B<SSL_verify_none>
+
+Sets the SSL_verify_mode and verify_hostname ssl options on the underlying
+L<REST::Client>'s user agent to 0, thus disabling them. This allows access to
+JIRA servers that have self-signed certificates that don't pass
+L<LWP::UserAgent>'s verification methods.
 
 =back
 
