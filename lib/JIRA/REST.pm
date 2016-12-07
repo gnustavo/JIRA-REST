@@ -81,7 +81,7 @@ sub new {
     }
 
     $rest_client_config = {} unless defined $rest_client_config;
-    croak __PACKAGE__ . "::new: REST_CLIENT_CONFIG argument must be a hash-ref.\n"
+    croak __PACKAGE__ . "::new: REST_CLIENT_CONFIG argument must be a hash reference.\n"
         unless
         defined $rest_client_config
         &&  ref $rest_client_config
@@ -256,7 +256,7 @@ sub _build_path {
     $path = $self->{path} . $path unless $path =~ m:^/rest/:;
 
     if (defined $query) {
-        croak $self->_error("The QUERY argument must be a hash-ref.")
+        croak $self->_error("The QUERY argument must be a hash reference.")
             unless ref $query && ref $query eq 'HASH';
         return $path . '?'. join('&', map {$_ . '=' . uri_escape($query->{$_})} keys %$query);
     } else {
@@ -596,7 +596,7 @@ The PUT and POST methods accept two more arguments:
 =item * VALUE
 
 This is the "entity" being PUT or POSTed. It can be any value, but
-usually is a hash-ref. The value is encoded as a
+usually is a hash reference. The value is encoded as a
 L<JSON|http://www.json.org/> string using the C<JSON::encode> method
 and sent with a Content-Type of C<application/json>.
 
@@ -623,7 +623,7 @@ according to its content type as follows:
 
 The majority of the API's resources return JSON values. Those are
 decoded using the C<decode> method of a C<JSON> object. Most of the
-endpoints return hashes, which are returned as a Perl hash-ref.
+endpoints return hashes, which are returned as a Perl hash reference.
 
 =item * text/plain
 
@@ -669,8 +669,8 @@ This module provides a few utility methods.
 
 =head2 B<set_search_iterator> PARAMS
 
-Sets up an iterator for the search specified by the hash-ref PARAMS. It must
-be called before calls to B<next_issue>.
+Sets up an iterator for the search specified by the hash reference PARAMS.
+It must be called before calls to B<next_issue>.
 
 PARAMS must conform with the query parameters allowed for the
 C</rest/api/2/search> JIRA REST endpoint.
