@@ -16,50 +16,31 @@ use REST::Client;
 sub new {
     my $class = shift; # this always has to come first!
 
-    my ($URL, $username, $password, $rest_client_config, $anonymous);
-    if (@_ > 1 || ! ref $_[0] || ref $_[0] ne 'HASH') {
-        # either we were passed more than one argument, or the
-        # one argument we were passed isn't a hash reference, so
-        # we are assuming that the new() method was called using
-        # the old "unnamed parameters" interface
+    # Valid option names in the order expected by the old-form constructor
+    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous/;
 
-        ($URL, $username, $password, $rest_client_config) = @_;
-    }
-    else {
-        # we were passed a hash reference, so let's use that
-        # to identify the arguments
-        my($args) = @_;
+    my %args;
 
-        while ( my($arg, $value) = each %$args ) {
-          SWITCH:
-            foreach (lc $arg) {
-                /^url$/ && do {
-                    $URL = $value;                last SWITCH; };
-                /^username$/ && do {
-                    $username = $value;           last SWITCH; };
-                /^password$/ && do {
-                    $password = $value;           last SWITCH; };
-                /^rest_client_config$/ && do {
-                    $rest_client_config = $value; last SWITCH; };
-                /^anonymous$/ && do {
-                    $anonymous = $value;          last SWITCH; };
-
-                # we don't recognize the argument we're being passed
-                croak __PACKAGE__ . "->new: unknown argument '$arg'";
-            } # SWITCH
-        }
+    if (@_ == 1 && ref $_[0] && ref $_[0] eq 'HASH') {
+        # The new-form constructor expects a single hash reference.
+        @args{@opts} = delete @{$_[0]}{@opts};
+        croak __PACKAGE__ . "::new: unknown arguments: '", join("', '", sort keys %{$_[0]}), "'.\n"
+            if keys %{$_[0]};
+    } else {
+        # The old-form constructor expects a list of positional parameters.
+        @args{@opts} = @_;
     }
 
-    # Make sure $URL isa URI
-    if (! defined $URL) {
-        croak __PACKAGE__ . "::new: URL argument must be defined.\n";
-    } elsif (! ref $URL) {
-        $URL = URI->new($URL);
-    } elsif (! $URL->isa('URI')) {
-        croak __PACKAGE__ . "::new: URL argument must be an URI object.\n";
+    # Turn the url into a URI object
+    if (! $args{url}) {
+        croak __PACKAGE__ . "::new: 'url' argument must be defined.\n";
+    } elsif (! ref $args{url}) {
+        $args{url} = URI->new($args{url});
+    } elsif (! $args{url}->isa('URI')) {
+        croak __PACKAGE__ . "::new: 'url' argument must be a URI object.\n";
     }
 
-    my $path = $URL->path('');
+    my $path = $args{url}->path('');
     # See if the user wants a specific JIRA Core REST API version:
     if ($path =~ m@^/?$@) {
         $path = '/rest/api/latest';
@@ -67,56 +48,55 @@ sub new {
         croak __PACKAGE__ . "::new: invalid path in URL: '$path'\n";
     }
 
-    unless ($anonymous) {
+    unless ($args{anonymous}) {
         # If username and password are not set we try to lookup the credentials
-        if (! defined $username || ! defined $password) {
-            ($username, $password) = _search_for_credentials($URL, $username);
+        if (! defined $args{username} || ! defined $args{password}) {
+            ($args{username}, $args{password}) =
+                _search_for_credentials($args{url}, $args{username});
         }
 
-        croak __PACKAGE__ . "::new: USERNAME argument must be a string.\n"
-            unless defined $username && ! ref $username && length $username;
-
-        croak __PACKAGE__ . "::new: PASSWORD argument must be a string.\n"
-            unless defined $password && ! ref $password && length $password;
+        foreach (qw/username password/) {
+            croak __PACKAGE__ . "::new: '$_' argument must be a non-empty string.\n"
+                unless defined $args{$_} && ! ref $args{$_} && length $args{$_};
+        }
     }
 
-    $rest_client_config = {} unless defined $rest_client_config;
-    croak __PACKAGE__ . "::new: REST_CLIENT_CONFIG argument must be a hash reference.\n"
-        unless
-        defined $rest_client_config
-        &&  ref $rest_client_config
-        &&  ref $rest_client_config eq 'HASH';
+    for ($args{rest_client_config}) {
+        $_ = {} unless defined;
+        croak __PACKAGE__ . "::new: 'rest_client_config' argument must be a hash reference.\n"
+            unless defined && ref && ref eq 'HASH';
+    }
 
     # remove the REST::Client faux config 'proxy' if set and use it later.
-    my $proxy = delete $rest_client_config->{proxy};
+    # This is deprecated since v0.017
+    if (my $proxy = delete $args{rest_client_config}{proxy}) {
+        carp __PACKAGE__ . "::new: passing 'proxy' in the 'rest_client_config' hash is deprecated. Please, use the corresponding argument instead.\n";
+        $args{proxy} = $proxy unless defined $args{proxy};
+    }
 
-    # remove the REST::Client faux config 'ssl_verify_none' if set
-    # and use it later.
-    my $ssl_verify_none = delete $rest_client_config->{ssl_verify_none};
-
-    my $rest = REST::Client->new($rest_client_config);
-
-    # Set proxy to be used
-    $rest->getUseragent->proxy(['http','https'] => $proxy) if $proxy;
-
-    # allow SSL verification to be turned off when the JIRA server has
-    # self-signed certificates
-    $rest->getUseragent()->ssl_opts( SSL_verify_mode => 0,
-                                     verify_hostname => 0 ) if $ssl_verify_none;
+    my $rest = REST::Client->new($args{rest_client_config});
 
     # Set default base URL
-    $rest->setHost($URL);
+    $rest->setHost($args{url});
 
     # Follow redirects/authentication by default
     $rest->setFollow(1);
 
-    # Since JIRA doesn't send an authentication chalenge, we may
-    # simply force the sending of the authentication header.
-    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$username:$password"))
-        unless $anonymous;
+    # Since JIRA doesn't send an authentication challenge, we force the
+    # sending of the authentication header.
+    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$args{username}:$args{password}"))
+        unless $args{anonymous};
 
-    # Configure UserAgent name
-    $rest->getUseragent->agent(__PACKAGE__);
+    for my $ua ($rest->getUseragent) {
+        # Configure UserAgent name
+        $ua->agent(__PACKAGE__);
+
+        # Set proxy to be used
+        $ua->proxy(['http','https'] => $args{proxy}) if $args{proxy};
+
+        # Turn off SSL verification if requested
+        $ua->ssl_opts(SSL_verify_mode => 0, verify_hostname => 0) if $args{ssl_verify_none};
+    }
 
     return bless {
         rest => $rest,
@@ -389,8 +369,8 @@ __END__
     my $jira = JIRA::REST->new({
         URL      => 'https://jira.example.net',
         username => 'myuser',
-        password => 'mypass,
-    }');
+        password => 'mypass',
+    });
 
     # File a bug
     my $issue = $jira->POST('/issue', undef, {
@@ -462,24 +442,24 @@ endpoints have a path prefix of C</rest/agile/VERSION>.
 
 =head1 CONSTRUCTOR
 
-=head2 new [URL, USERNAME, PASSWORD [, REST_CLIENT_CONFIG] | CONFIG HASHREF]
+=head2 new HASHREF
+=head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, ANONYMOUS, PROXY, SSL_VERIFY_NONE
 
-The constructor can either take up to four I<unnamed> arguments, in the order
+The constructor can take its arguments from a single hash reference or from
+a list of positional parameters. The first form is prefered because it lets
+you specify only the arguments you need. The second form forces you to pass
+undefined values if you need to pass a specific value to an argument further
+to the right.
 
-  URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG
-
-or it can accept a single hash reference with keys indicating the names of the
-parameters.  If a has reference is used, the parameters can be specified in any
-order.
-
-The constructor accepts the following arguments:
+The arguments are described below with the names which must be used as the
+hash keys:
 
 =over 4
 
-=item * B<URL>
+=item * B<url>
 
-A string or a URI object denoting the base URL of the JIRA
-server. This is a required argument.
+A string or a URI object denoting the base URL of the JIRA server. This is a
+required argument.
 
 The REST methods described below all accept as a first argument the
 endpoint's path of the specific API method to call. In general you can pass
@@ -492,60 +472,52 @@ choose a specific version of the JIRA Core API to use instead of the latest
 one. For example:
 
     my $jira = JIRA::REST->new({
-        URL => 'https://jira.example.net/rest/api/1',
+        url => 'https://jira.example.net/rest/api/1',
     });
 
 =item * B<username>
+=item * B<password>
 
-The username of a JIRA user.
+The username and password of a JIRA user to use for authentication.
 
-It can be undefined if B<password> is also undefined. In this a case (and if
-the B<anonymous> argument is not set to true) the module looks up the user
-credentials in either the C<.netrc> file or via L<Config::Identity> (which
-allows C<gpg> encrypted credentials).
+If B<anonymous> is false then, if either B<username> or B<password> isn't
+defined the module looks them up in either the C<.netrc> file or via
+L<Config::Identity> (which allows C<gpg> encrypted credentials).
 
 L<Config::Identity> will look for F<~/.jira-identity> or F<~/.jira>.
 You can change the filename stub from C<jira> to a custom stub with the
 C<JIRA_REST_IDENTITY> environment variable.
 
-=item * B<password>
-
-The HTTP password of the user. (This is the password the user uses to
-log in to JIRA's web interface.)
-
-It can be undefined, in which case (if the B<anonymous> argument is not set to
-true) the module looks up the user credentials in either the C<.netrc> file or
-via L<Config::Identity>.
-
-=item * B<anonymous>
-
-Tells the module that you want to connect to the specified JIRA server with no
-username or password.  This way you can access public JIRA servers without
-needing to authenticate.
-
-=item * REST_CLIENT_CONFIG
+=item * B<rest_client_config>
 
 A JIRA::REST object uses a L<REST::Client> object to make the REST
 invocations. This optional argument must be a hash reference that can be fed
-to the REST::Client constructor. Note that the C<URL> argument
+to the REST::Client constructor. Note that the C<url> argument
 overwrites any value associated with the C<host> key in this hash.
 
-The hash reference also allows two additional arguments that are extensions to the REST::Client configuration and will be removed from the hash before passing it on to the REST::Client constructor:
+As an extension, the hash reference also accepts one additional argument
+called B<proxy> that is an extension to the REST::Client configuration and
+will be removed from the hash before passing it on to the REST::Client
+constructor. However, this argument is deprecated since v0.017 and you
+should avoid it. Instead, use the following argument instead.
 
-=over 4
+=item * B<proxy>
 
-=item + B<proxy>
+To use a network proxy set this argument to the string or URI object
+describing the fully qualified URL (including port) to your network proxy.
 
-To use a network proxy please set the 'proxy' argument to the string or URI
-object describing the fully qualified (including port) URL to your network
-proxy.
+=item * B<ssl_verify_none>
 
-=item + B<SSL_verify_none>
+Sets the C<SSL_verify_mode> and C<verify_hostname ssl> options on the
+underlying L<REST::Client>'s user agent to 0, thus disabling them. This
+allows access to JIRA servers that have self-signed certificates that don't
+pass L<LWP::UserAgent>'s verification methods.
 
-Sets the SSL_verify_mode and verify_hostname ssl options on the underlying
-L<REST::Client>'s user agent to 0, thus disabling them. This allows access to
-JIRA servers that have self-signed certificates that don't pass
-L<LWP::UserAgent>'s verification methods.
+=item * B<anonymous>
+
+Tells the module that you want to connect to the specified JIRA server with
+no username or password.  This way you can access public JIRA servers
+without needing to authenticate.
 
 =back
 
