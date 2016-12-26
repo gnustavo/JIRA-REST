@@ -25,12 +25,11 @@ sub new {
         croak __PACKAGE__ . "::new: URL argument must be an URI object.\n";
     }
 
-    my $path = $URL->path('');
-    # See if the user wants a specific JIRA Core REST API version:
-    if ($path =~ m@^/?$@) {
-        $path = '/rest/api/latest';
-    } elsif ($path !~ m@^/rest/api/(?:latest|\d+)$@) {
-        croak __PACKAGE__ . "::new: invalid path in URL: '$path'\n";
+    my ($path, $api) = ($URL->path, '/rest/api/latest');
+    # See if the user wants a default REST API:
+    if ($path =~ s:(/rest/.*)$::) {
+        $api = $1;
+        $URL->path($path);
     }
 
     # If username and password are not set we try to lookup the credentials
@@ -75,7 +74,7 @@ sub new {
     return bless {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
-        path => $path,
+        api  => $api,
     } => $class;
 }
 
@@ -207,7 +206,8 @@ sub _content {
 sub _build_path {
     my ($self, $path, $query) = @_;
 
-    $path = $self->{path} . $path unless $path =~ m:^/rest/:;
+    # Prefix $path with the default API prefix unless it already specifies one
+    $path = $self->{api} . $path unless $path =~ m:^/rest/:;
 
     if (defined $query) {
         croak $self->_error("The QUERY argument must be a hash-ref.")
@@ -427,13 +427,18 @@ The REST methods described below all accept as a first argument the
 endpoint's path of the specific API method to call. In general you can pass
 the complete path, beginning with the prefix denoting the particular API to
 use (C</rest/api/VERSION>, C</rest/servicedeskapi>, or
-C</rest/agile/VERSION>). However, to make it easier to invoke JIRA's Core
-API if you pass a path not starting with C</rest/> it will be prefixed with
-C</rest/api/latest> or with this URL's path if it has one. This way you can
-choose a specific version of the JIRA Core API to use instead of the latest
-one. For example:
+C</rest/agile/VERSION>). However, you may specify a default API prefix by
+suffixing the URL with it. For example:
 
-    my $jira = JIRA::REST->new('https://jira.example.net/rest/api/1', 'myuser', 'mypass');
+    my $jira = JIRA::REST->new('https://jira.example.net/jira/rest/api/1', 'myuser', 'mypass');
+
+    $jira->GET('/rest/api/1/issue/TST-1');
+    $jira->GET('/issue/TST-1');
+
+With this constructor call both GET methods are the same, because the second
+one does not specify an API prefix. This is useful if you mainly want to use
+a particular API or if you want to specify a particular version of an API
+during construction.
 
 =item * USERNAME
 
