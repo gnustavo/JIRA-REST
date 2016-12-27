@@ -3,8 +3,14 @@
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 8;
+use Test::More;
 use JIRA::REST;
+
+if ($ENV{RELEASE_TESTING}) {
+    plan tests => 8;
+} else {
+    plan skip_all => 'these tests are for release testing';
+}
 
 my $jira = new_ok('JIRA::REST', [{ url => 'https://jira.atlassian.com', anonymous => 1 }]);
 
