@@ -2,6 +2,35 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.016     2016-12-26 22:48:03-02:00 America/Sao_Paulo (TRIAL RELEASE)
+
+  [New features]
+
+  - Add support for all JIRA REST API's: JIRA Core, JIRA ServiceDesk, and
+    JIRA Software.
+
+  - Add a new-style of parameter passing for the constructor, via a hash
+    reference.
+
+  - Add support for anonymous REST interaction with JIRA.
+
+  - Add support for a new REST::Client configration extension to turn off
+    SSL verification.
+
+  [Fix]
+
+  - Add missing META.json file to the distribution.
+
+  [Enhancement]
+
+  - Add a few tests against jira.atlassian.com that can be performed
+    anonymously during release.
+
+  [Deprecation]
+
+  - The 'proxy' key to the REST::Client hash is deprecated in favor of the
+    new homonymous constructor parameter.
+
 0.015     2016-12-02 14:08:34-02:00 America/Sao_Paulo
 
   [Fix]
