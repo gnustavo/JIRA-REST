@@ -342,9 +342,10 @@ sub attach_files {
     my $rest = $self->{rest};
 
     # FIXME: How to attach all files at once?
+    my $url = $rest->getHost . $self->{ api } .  "/issue/$issueIdOrKey/attachments";
     foreach my $file (@files) {
         my $response = $rest->getUseragent()->post(
-            $rest->getHost . "/issue/$issueIdOrKey/attachments",
+            $url,
             %{$rest->{_headers}},
             'X-Atlassian-Token' => 'nocheck',
             'Content-Type'      => 'form-data',
