@@ -468,7 +468,11 @@ use (C</rest/api/VERSION>, C</rest/servicedeskapi>, or
 C</rest/agile/VERSION>). However, you may specify a default API prefix by
 suffixing the URL with it. For example:
 
-    my $jira = JIRA::REST->new('https://jira.example.net/jira/rest/api/1', 'myuser', 'mypass');
+    my $jira = JIRA::REST->new({
+        url      => 'https://jira.example.net/jira/rest/api/1',
+        username => 'myuser',
+        password => 'mypass'
+    });
 
     $jira->GET('/rest/api/1/issue/TST-1');
     $jira->GET('/issue/TST-1');
