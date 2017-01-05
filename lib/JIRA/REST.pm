@@ -442,6 +442,7 @@ endpoints have a path prefix of C</rest/agile/VERSION>.
 =head1 CONSTRUCTOR
 
 =head2 new HASHREF
+
 =head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, ANONYMOUS, PROXY, SSL_VERIFY_NONE
 
 The constructor can take its arguments from a single hash reference or from
@@ -478,6 +479,7 @@ a particular API or if you want to specify a particular version of an API
 during construction.
 
 =item * B<username>
+
 =item * B<password>
 
 The username and password of a JIRA user to use for authentication.
