@@ -2,6 +2,12 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.017     2017-01-06 15:47:28-02:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Fix attach_file() method which was broken on v0.016.
+
 0.016     2016-12-26 22:48:03-02:00 America/Sao_Paulo (TRIAL RELEASE)
 
   [New features]
