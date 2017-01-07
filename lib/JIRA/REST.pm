@@ -46,6 +46,12 @@ sub new {
         $api = $1;
         $args{url}->path($path);
     }
+    # Strip trailing slashes from $path. For some reason they cause 404
+    # errors down the road.
+    if ($path =~ s:/+$::) {
+        $args{url}->path($path);
+    }
+
     unless ($args{anonymous}) {
         # If username and password are not set we try to lookup the credentials
         if (! defined $args{username} || ! defined $args{password}) {
