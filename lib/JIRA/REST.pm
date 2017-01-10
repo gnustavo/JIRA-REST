@@ -237,8 +237,9 @@ sub _content {
 sub _build_path {
     my ($self, $path, $query) = @_;
 
-    # Prefix $path with the default API prefix unless it already specifies one
-    $path = $self->{api} . $path unless $path =~ m:^/rest/:;
+    # Prefix $path with the default API prefix unless it already specifies
+    # one or it's an absolute URL.
+    $path = $self->{api} . $path unless $path =~ m@^(?:/rest/|(?i)https?:)@;
 
     if (defined $query) {
         croak $self->_error("The QUERY argument must be a hash reference.")
