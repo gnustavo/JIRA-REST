@@ -355,7 +355,7 @@ sub attach_files {
             %{$rest->{_headers}},
             'X-Atlassian-Token' => 'nocheck',
             'Content-Type'      => 'form-data',
-            'Content'           => [ file => [$file] ],
+            'Content'           => [ file => [$file, Encode::encode_utf8( $file )] ],
         );
 
         $response->is_success
