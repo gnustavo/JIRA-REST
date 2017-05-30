@@ -2,6 +2,16 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.018     2017-05-30 09:38:37-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Strip trailing slashes from JIRA's URL to avoid 404 errors.
+
+  - Make sure UTF-8-encoded filenames are preserved when attached to JIRA.
+
+  - Correct the github-repository-uri in the metadata.
+
 0.017     2017-01-06 15:47:28-02:00 America/Sao_Paulo
 
   [Fixes]
