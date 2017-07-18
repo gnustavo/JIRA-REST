@@ -10,7 +10,7 @@ use Carp;
 use URI;
 use MIME::Base64;
 use URI::Escape;
-use JSON;
+use JSON 2.23;
 use REST::Client;
 
 sub new {
