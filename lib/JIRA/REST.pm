@@ -683,6 +683,33 @@ requires a specific content type encoding which is difficult to come up with
 just the C<REST::Client> interface. This utility method offers an easier
 interface to attach files to issues.
 
+=head1 PERL AND JIRA COMPATIBILITY POLICY
+
+Currently L<JIRA::REST> requires Perl 5.10 and supports JIRA 7.0.
+
+We try to be compatible with the Perl native packages of the oldest L<Ubuntu
+LTS|https://www.ubuntu.com/info/release-end-of-life> and
+L<CentOS|https://wiki.centos.org/About/Product> Linux distributions still
+getting maintainance updates.
+
+  +-----------------------+------+-------------+
+  | Distro                | Perl | End of Life |
+  +-----------------------+------+-------------+
+  | Ubuntu 14.04 (trusty) | 5.18 |   2019-04   |
+  | Ubuntu 16.04 (xenial) | 5.22 |   2021-04   |
+  | Ubuntu 18.04 (bionic) | 5.26 |   2023-04   |
+  | CentOS 6              | 5.10 |   2020-12   |
+  | CentOS 7              | 5.16 |   2024-07   |
+  +-----------------------+------+-------------+
+
+As you can see, we're kept behind mostly by the slow pace of CentOS (actually,
+RHEL) releases.
+
+As for JIRA, the policy is very lax. I (the author) only test L<JIRA::REST> on
+the JIRA server installed in the company I work for, which is usually (but not
+always) at most one year older than the newest released version. I don't have
+yet an easy way to test it on different versions.
+
 =head1 SEE ALSO
 
 =over
