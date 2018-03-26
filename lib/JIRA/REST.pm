@@ -1,7 +1,7 @@
 package JIRA::REST;
 # ABSTRACT: Thin wrapper around JIRA's REST API
 
-use 5.008_008;
+use 5.010;
 use utf8;
 use strict;
 use warnings;
@@ -66,7 +66,7 @@ sub new {
     }
 
     for ($args{rest_client_config}) {
-        $_ = {} unless defined;
+        $_ //= {};
         croak __PACKAGE__ . "::new: 'rest_client_config' argument must be a hash reference.\n"
             unless defined && ref && ref eq 'HASH';
     }
@@ -75,7 +75,7 @@ sub new {
     # This is deprecated since v0.017
     if (my $proxy = delete $args{rest_client_config}{proxy}) {
         carp __PACKAGE__ . "::new: passing 'proxy' in the 'rest_client_config' hash is deprecated. Please, use the corresponding argument instead.\n";
-        $args{proxy} = $proxy unless defined $args{proxy};
+        $args{proxy} //= $proxy;
     }
 
     my $rest = REST::Client->new($args{rest_client_config});
@@ -278,8 +278,7 @@ sub PUT {
     $path = $self->_build_path($path, $query);
 
     $headers                   ||= {};
-    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8'
-        unless defined $headers->{'Content-Type'};
+    $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
 
     $self->{rest}->PUT($path, $self->{json}->encode($value), $headers);
 
@@ -295,8 +294,7 @@ sub POST {
     $path = $self->_build_path($path, $query);
 
     $headers                   ||= {};
-    $headers->{'Content-Type'}   = 'application/json;charset=UTF-8'
-        unless defined $headers->{'Content-Type'};
+    $headers->{'Content-Type'} //= 'application/json;charset=UTF-8';
 
     $self->{rest}->POST($path, $self->{json}->encode($value), $headers);
 
