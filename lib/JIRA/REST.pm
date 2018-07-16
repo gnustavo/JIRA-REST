@@ -196,6 +196,9 @@ sub _error {
             if (my $errors = $error->{errors}) {
                 $msg .= "- [$_] $errors->{$_}\n" foreach sort keys %$errors;
             }
+
+            # some give us a single message in 'errorMessage'
+            $msg .= $error->{errorMessage} . qq{\n} if $error->{errorMessage};
         } else {
             $msg .= $content;
         }
