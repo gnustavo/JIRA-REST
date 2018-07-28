@@ -1,32 +1,32 @@
 =pod
 
-JIRA::REST - Thin wrapper around JIRA's REST APIs
+JIRA::REST - Thin wrapper around Jira's REST APIs
 
-L<JIRA|http://www.atlassian.com/software/jira> is a proprietary bug
+L<Jira|http://www.atlassian.com/software/jira> is a proprietary bug
 tracking system from
 L<Atlassian|http://www.atlassian.com/software/jira/>.
 
-This module implements a thin wrapper around JIRA's REST APIs:
+This module implements a thin wrapper around Jira's REST APIs:
 
 =over
 
-=item * L<JIRA Core REST API|https://docs.atlassian.com/jira/REST/server/>
+=item * L<Jira Core REST API|https://docs.atlassian.com/jira/REST/server/>
 
-This rich API superseded the old L<JIRA SOAP
+This rich API superseded the old L<Jira SOAP
 API|http://docs.atlassian.com/software/jira/docs/api/rpc-jira-plugin/latest/com/atlassian/jira/rpc/soap/JiraSoapService.html>
-which isn't supported anymore as of JIRA version 7.
+which isn't supported anymore as of Jira version 7.
 
-=item * L<JIRA Service Desk REST API|https://docs.atlassian.com/jira-servicedesk/REST/server/>
+=item * L<Jira Service Desk REST API|https://docs.atlassian.com/jira-servicedesk/REST/server/>
 
-This API deals with the objects of the JIRA Service Desk application.
+This API deals with the objects of the Jira Service Desk application.
 
-=item * L<JIRA Software REST API|https://docs.atlassian.com/jira-software/REST/server/>
+=item * L<Jira Software REST API|https://docs.atlassian.com/jira-software/REST/server/>
 
-This API deals with the objects of the JIRA Software application.
+This API deals with the objects of the Jira Software application.
 
 =back
 
-Copyright (c) 2013-2016 by CPqD (http://www.cpqd.com.br/)
+Copyright (c) 2013-2018 by CPqD (http://www.cpqd.com.br/)
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
