@@ -17,7 +17,8 @@ sub new {
     my $class = shift; # this always has to come first!
 
     # Valid option names in the order expected by the old-form constructor
-    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous/;
+    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous
+                      cookie_based_auth cookie_file browser_login confluence/;
 
     my %args;
 
@@ -86,11 +87,6 @@ sub new {
     # Follow redirects/authentication by default
     $rest->setFollow(1);
 
-    # Since JIRA doesn't send an authentication challenge, we force the
-    # sending of the authentication header.
-    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$args{username}:$args{password}"))
-        unless $args{anonymous};
-
     for my $ua ($rest->getUseragent) {
         # Configure UserAgent name
         $ua->agent(__PACKAGE__);
@@ -102,11 +98,123 @@ sub new {
         $ua->ssl_opts(SSL_verify_mode => 0, verify_hostname => 0) if $args{ssl_verify_none};
     }
 
-    return bless {
+    my $invocant = bless {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
         api  => $api,
     } => $class;
+
+    unless ($args{anonymous}) {
+        if ($args{cookie_based_auth}) {
+            my $browser_login_url = '/login.jsp';
+            if($args{confluence}){
+                $browser_login_url = '/dologin.action';
+                $args{browser_login} = 1;
+            }
+            $invocant->_set_session_id(
+                username => $args{username},
+                password => $args{password},
+                browser_login => $args{browser_login},
+                cookie_file => $args{cookie_file},
+                browser_login_url => $browser_login_url,
+                confluence => $args{confluence},
+            );
+        } else {
+           # Since JIRA doesn't send an authentication challenge, we force the
+           # sending of the authentication header.
+           $rest->addHeader(Authorization => 'Basic ' . encode_base64("$args{username}:$args{password}"))
+         }
+    }
+
+    return $invocant;
+}
+
+sub _set_session_id {
+    my ($self, %params) = @_;
+
+    eval {require HTTP::Cookies;1} or croak "Can't require HTTP::Cookies module.";
+    eval {require HTTP::Status;1} or croak "Can't require HTTP::Status module.";
+
+    my $cookie_jar = HTTP::Cookies->new();
+    my $ua = $self->{rest}->getUseragent();
+    my $check_auth;
+    if ($params{cookie_file}) {
+        $check_auth = 1 if -f $params{cookie_file};
+        $cookie_jar = HTTP::Cookies->new(file => $params{cookie_file}, ignore_discard => 1);
+    }
+    if ($check_auth) {
+        # check if we can use previously stored session id
+        $ua->cookie_jar($cookie_jar);
+        if($params{confluence}){
+          return if $self->_check_confluence_auth(%params);
+        } else {
+          return if $self->_check_jira_auth(%params);
+        }
+        $ua->cookie_jar({});
+        $cookie_jar->clear;
+    }
+    $self->_get_session_id(%params, cookie_jar => $cookie_jar);
+    $ua->cookie_jar($cookie_jar);
+    return;
+}
+
+sub _check_confluence_auth {
+    my ($self, %params) = @_;
+    my $rest = $self->{rest};
+    #https://developer.atlassian.com/cloud/confluence/rest/#api-user-get
+    my $res = $self->GET('/rest/api/user/current');
+    if($res->{type} eq 'anonymous'){
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+sub _check_jira_auth {
+    my ($self, %params) = @_;
+    my $rest = $self->{rest};
+
+    $rest->GET('/rest/auth/1/session');
+    my $code = $rest->responseCode();
+    if ($code !~ /^2/ ) {
+        if($code == HTTP::Status::HTTP_UNAUTHORIZED){
+            return 0;
+        } else {
+            croak $self->_error("Can't check auth: " . $code);
+        }
+    }
+    return 1;
+}
+
+sub _get_session_id {
+    my ($self, %params) = @_;
+    my ($data, $path, $headers);
+    my $rest = $self->{rest};
+
+    if ($params{browser_login}) {
+        $path = $params{browser_login_url};
+        $data = $rest->buildQuery(map {;"os_$_" => $params{$_}||""} qw/username password description/);
+        # URI->query_form add initial question mark, jist strip it
+        $data =~ s[^\?]//;
+        $headers = {'Content-Type' => 'application/x-www-form-urlencoded'};
+    } else {
+        # Sadly, but I don't have possibility to test this on my JIRA installation,
+        # just implement by documentation
+        # https://developer.atlassian.com/server/jira/platform/cookie-based-authentication/
+        $path = $self->_build_path('/rest/auth/1/session');
+        $data = $self->{json}->encode({username => $params{username}, password => $params{password}});
+        $headers = {'Content-Type' => 'application/json'};
+    }
+
+    $rest->POST($path, $data, $headers);
+    # d'oh
+    my $response = $rest->{_res};
+    $response->is_success
+        or croak $self->_error("Can't get session_id $path:" . $response->status_line);
+    $params{cookie_jar}->extract_cookies($response);
+    $params{cookie_jar}->save;
+
+    return;
 }
 
 sub _search_for_credentials {
@@ -372,10 +480,21 @@ __END__
 
     use JIRA::REST;
 
+    # Basic auth
     my $jira = JIRA::REST->new({
-        URL      => 'https://jira.example.net',
+        url      => 'https://jira.example.net',
         username => 'myuser',
         password => 'mypass',
+    });
+
+    # Cookie-based web auth
+    $jira = JIRA::REST->new({
+        url      => 'https://jira.example.net',
+        username => 'myuser',
+        password => 'mypass',
+        cookie_based_auth => 1,
+        browser_login => 1,
+        cookie_file => "$ENV{HOME}/.jira_rest_cookie", 
     });
 
     # File a bug
@@ -417,6 +536,35 @@ __END__
     # Attach files using an utility method
     $jira->attach_files('TST-123', '/path/to/doc.txt', 'image.png');
 
+    # Confluence web auth
+    my $confluence = JIRA::REST->new({
+        url      => 'https://confluence.example.net',
+        username => 'myuser',
+        password => 'mypass',
+        cookie_based_auth => 1,
+        confluence => 1,
+    });
+
+    # Get page data
+    my $page = $confluence->GET("/rest/api/content/$id");
+
+    my $set = {
+        title => $page->{title},
+        type  => $page->{type},
+        body  => { 
+            storage => { 
+                value => "Some text", 
+                representation => 'storage'
+            }
+        },
+        version => { 
+            number => $page->{version}{number} + 1
+        }
+   };
+
+   # Set page data
+   $confluence->PUT("/rest/api/content/$id", undef, $set);
+
 =head1 DESCRIPTION
 
 L<JIRA|http://www.atlassian.com/software/jira/> is a proprietary bug
@@ -450,7 +598,7 @@ endpoints have a path prefix of C</rest/agile/VERSION>.
 
 =head2 new HASHREF
 
-=head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, ANONYMOUS, PROXY, SSL_VERIFY_NONE
+=head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, ANONYMOUS, PROXY, SSL_VERIFY_NONE, COOKIE_BASED_AUTH, COOKIE_FILE, BROWSER_LOGIN, CONFLUENCE
 
 The constructor can take its arguments from a single hash reference or from
 a list of positional parameters. The first form is preferred because it lets
@@ -533,6 +681,23 @@ pass L<LWP::UserAgent>'s verification methods.
 Tells the module that you want to connect to the specified JIRA server with
 no username or password.  This way you can access public JIRA servers
 without needing to authenticate.
+
+=item * B<cookie_based_auth>
+
+=item * B<cookie_file>
+
+=item * B<browser_login>
+
+Implement L<Cookie-based Authentification|https://developer.atlassian.com/server/jira/platform/cookie-based-authentication/>. 
+To use this B<anonymous> should be false. B<cookie_file> path to file there cookie
+will saved beetween object instantiation, if does not set, then try
+to get cookie every time C<new> invoked. B<browser_login> make authorization
+request to JIRA login page instead C</jira/rest/auth/1/session>
+
+=item * B<confluence>
+
+Implement Confluence browser authentication. Works only with B<cookie_based_auth> enabled.
+Use L<browser_login> behind, because confluence does not have special api login url as jira does.
 
 =back
 
