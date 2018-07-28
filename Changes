@@ -2,6 +2,27 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.019     2018-07-28 18:00:17-03:00 America/Sao_Paulo
+
+  [Changes]
+
+  - JIRA::REST now requires at least Perl 5.10. Previously it required Perl
+    5.8. A new section in the documentation explains our Perl and Jira
+    compatibility Policy.
+
+  [Fixes]
+
+  - William Carr fixed the sub_error routine teaching it yet another way Jira
+    can pass error messages back.
+
+  [Documentation]
+
+  - Lisa Hare graciously contributed some example scripts which can be found on
+    the 'examples' directory.
+
+  - All mentions of 'JIRA' were changed to 'Jira', following the change
+    Atlassian made in all of its site and documentation.
+
 0.018     2017-05-30 09:38:37-03:00 America/Sao_Paulo
 
   [Fixes]
