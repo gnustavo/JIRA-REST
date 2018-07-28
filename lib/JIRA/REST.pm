@@ -8,6 +8,7 @@ use warnings;
 
 use Carp;
 use URI;
+use Encode;
 use MIME::Base64;
 use URI::Escape;
 use JSON 2.23;
@@ -356,7 +357,7 @@ sub attach_files {
             %{$rest->{_headers}},
             'X-Atlassian-Token' => 'nocheck',
             'Content-Type'      => 'form-data',
-            'Content'           => [ file => [$file, Encode::encode_utf8( $file )] ],
+            'Content'           => [ file => [$file, encode_utf8( $file )] ],
         );
 
         $response->is_success
