@@ -29,7 +29,7 @@ for my $validate (eval {$jira->GET('/projectvalidate/key', {key => 'JRASERVER'})
 }
 
 for my $info (eval {$jira->GET('/serverInfo')}) {
-    ok(defined $info && $info->{serverTitle} eq 'Atlassian JIRA', 'GET /serverInfo');
+    ok(defined $info && $info->{serverTitle} =~ /Atlassian/, 'GET /serverInfo');
 }
 
 $jira->set_search_iterator({
