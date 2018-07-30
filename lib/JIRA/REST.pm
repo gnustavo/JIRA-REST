@@ -516,7 +516,7 @@ As an extension, the hash reference also accepts one additional argument
 called B<proxy> that is an extension to the REST::Client configuration and
 will be removed from the hash before passing it on to the REST::Client
 constructor. However, this argument is deprecated since v0.017 and you
-should avoid it. Instead, use the following argument instead.
+should avoid it. Use the following argument instead.
 
 =item * B<proxy>
 
