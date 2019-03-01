@@ -428,7 +428,7 @@ This module implements a very thin wrapper around Jira's REST APIs:
 
 =over
 
-=item * L<Jira Core REST API|https://docs.atlassian.com/jira/REST/server/>
+=item * L<Jira Core REST API|https://docs.atlassian.com/software/jira/docs/api/REST/latest/>
 
 This rich API superseded the old L<Jira SOAP
 API|http://docs.atlassian.com/software/jira/docs/api/rpc-jira-plugin/latest/com/atlassian/jira/rpc/soap/JiraSoapService.html>
