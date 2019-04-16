@@ -89,7 +89,7 @@ sub new {
 
     # Since Jira doesn't send an authentication challenge, we force the
     # sending of the authentication header.
-    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$args{username}:$args{password}"))
+    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$args{username}:$args{password}", ''))
         unless $args{anonymous};
 
     for my $ua ($rest->getUseragent) {
