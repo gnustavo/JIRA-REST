@@ -717,6 +717,10 @@ yet an easy way to test it on different versions.
 
 JIRA::REST uses a REST::Client object to perform the low-level interactions.
 
+=item * C<JIRA::REST::OAuth>
+
+This module Sub Classes JIRA::REST providing OAuth 1.0 support.
+
 =item * C<JIRA::Client::REST>
 
 This is another module implementing Jira's REST API using
