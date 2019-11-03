@@ -375,7 +375,7 @@ __END__
     use JIRA::REST;
 
     my $jira = JIRA::REST->new({
-        URL      => 'https://jira.example.net',
+        url      => 'https://jira.example.net',
         username => 'myuser',
         password => 'mypass',
     });
@@ -557,7 +557,7 @@ fields, you pass C</rest/api/latest/field>, and in order to get SLA
 information about an issue you pass
 C</rest/servicedeskapi/request/$key/sla>.
 
-If you're using a method form Jira Core REST API you may omit the prefix
+If you're using a method from Jira Core REST API you may omit the prefix
 C</rest/api/VERSION>. For example, to GET the list of all fields you may
 pass just C</field>.
 
