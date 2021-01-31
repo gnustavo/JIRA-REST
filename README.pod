@@ -26,7 +26,7 @@ This API deals with the objects of the Jira Software application.
 
 =back
 
-Copyright (c) 2013-2018 by CPqD (http://www.cpqd.com.br/)
+Copyright (c) 2013-2021 by CPQD (http://www.cpqd.com.br/)
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
