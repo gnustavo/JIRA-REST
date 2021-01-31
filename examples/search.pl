@@ -2,8 +2,7 @@
 
 # perl -Ilib examples/search.pl --jiraurl https://lharey.atlassian.net --jql "assignee = 'Lisa Hare'"
 
-use 5.010;
-use strict;
+use 5.016;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/lib";

@@ -1,8 +1,7 @@
 #!/usr/bin/env perl
 
-use 5.010;
+use 5.016;
 use utf8;
-use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/lib";
