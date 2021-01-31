@@ -62,7 +62,7 @@ sub new {
 
         foreach (qw/username password/) {
             croak __PACKAGE__ . "::new: '$_' argument must be a non-empty string.\n"
-                unless defined $args{$_} && ! ref $args{$_} && length $args{$_};
+                if ! defined $args{$_} || ref $args{$_} || length $args{$_} == 0;
         }
     }
 
@@ -363,6 +363,8 @@ sub attach_files {
         $response->is_success
             or croak $self->_error("attach_files($file): " . $response->status_line);
     }
+
+    return;
 }
 
 1;
