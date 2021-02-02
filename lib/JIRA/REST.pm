@@ -12,6 +12,7 @@ use MIME::Base64;
 use URI::Escape;
 use JSON 2.23;
 use REST::Client;
+use HTTP::CookieJar::LWP;
 
 sub new {
     my $class = shift; # this always has to come first!
@@ -100,6 +101,9 @@ sub new {
 
         # Turn off SSL verification if requested
         $ua->ssl_opts(SSL_verify_mode => 0, verify_hostname => 0) if $args{ssl_verify_none};
+
+        # Configure a cookie_jar so that we can send Cookie headers
+        $ua->cookie_jar(HTTP::CookieJar::LWP->new());
     }
 
     return bless {
