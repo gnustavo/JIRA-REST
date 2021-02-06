@@ -2,6 +2,29 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.021     2021-02-05 22:14:44-03:00 America/Sao_Paulo
+
+  [Deprecation]
+
+  - Since CentOS 6 reached EOL on December/2020, following our policy we're
+    dropping support for it and, consequently, for Perl 5.10. Now Jira::REST
+    requires Perl 5.16, which ships with CentOS 7, which will reach EOL on July,
+    2024.
+
+  [Enhancement]
+
+  - Now the constructor sets up a cookie jar on the LWP::UserAgent object
+    inside, so that it can keep and use the session cookies it gets from the
+    server, making it possible to establish and keep user sessions. This is
+    particularly useful when interacting with Jira Data Center instances.
+
+  [New feature]
+
+  - A new constructor called 'new_session' is implemented. It accepts the same
+    options as the default constructor 'new', invokes it and then creates a user
+    session, which is destroyed during destruction of the JIRA::REST
+    object.
+
 0.020     2019-11-02 23:13:42-03:00 America/Sao_Paulo
 
   [Documentation]
