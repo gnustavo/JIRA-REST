@@ -110,7 +110,24 @@ sub new {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
         api  => $api,
+        args => \%args,
     } => $class;
+}
+
+sub new_session {
+    my ($class, @args) = @_;
+    my $jira = $class->new(@args);
+    $jira->{_session} = $jira->POST('/rest/auth/1/session', undef, {
+        username => $jira->{args}{username},
+        password => $jira->{args}{password},
+    });
+    return $jira;
+}
+
+sub DESTROY {
+    my $self = shift;
+    $self->DELETE('/rest/auth/1/session') if exists $self->{_session};
+    return;
 }
 
 sub _search_for_credentials {
@@ -453,17 +470,17 @@ endpoints have a path prefix of C</rest/agile/VERSION>.
 
 =back
 
-=head1 CONSTRUCTOR
+=head1 CONSTRUCTORS
 
 =head2 new HASHREF
 
 =head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, ANONYMOUS, PROXY, SSL_VERIFY_NONE
 
-The constructor can take its arguments from a single hash reference or from
-a list of positional parameters. The first form is preferred because it lets
-you specify only the arguments you need. The second form forces you to pass
-undefined values if you need to pass a specific value to an argument further
-to the right.
+The default constructor can take its arguments from a single hash reference or
+from a list of positional parameters. The first form is preferred because it
+lets you specify only the arguments you need. The second form forces you to pass
+undefined values if you need to pass a specific value to an argument further to
+the right.
 
 The arguments are described below with the names which must be used as the
 hash keys:
@@ -542,6 +559,19 @@ no username or password.  This way you can access public Jira servers
 without needing to authenticate.
 
 =back
+
+=head2 new_session OPTIONS
+
+This 'session' constructor first invokes the default constructor, passing to it
+all the options it receives. Then it makes a C<POST /rest/auth/1/session> to
+login to Jira, creating a user session.
+
+This is particularly useful when interacting with Jira Data Center, because it
+can use the session cookie to maintain affinity with one of the redundant
+servers.
+
+When created with this constructor, upon destruction the object makes a C<DELETE
+/rest/auth/1/session> to logout from Jira.
 
 =head1 REST METHODS
 
