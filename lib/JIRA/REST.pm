@@ -18,7 +18,7 @@ sub new {
     my $class = shift; # this always has to come first!
 
     # Valid option names in the order expected by the old-form constructor
-    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous/;
+    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat/;
 
     my %args;
 
@@ -53,7 +53,7 @@ sub new {
         $args{url}->path($path);
     }
 
-    unless ($args{anonymous}) {
+    unless ($args{anonymous} || $args{pat}) {
         # If username and password are not set we try to lookup the credentials
         if (! defined $args{username} || ! defined $args{password}) {
             ($args{username}, $args{password}) =
@@ -89,8 +89,10 @@ sub new {
 
     # Since Jira doesn't send an authentication challenge, we force the
     # sending of the authentication header.
-    $rest->addHeader(Authorization => 'Basic ' . encode_base64("$args{username}:$args{password}", ''))
-        unless $args{anonymous};
+    $rest->addHeader( Authorization => $args{pat}
+        ? "Bearer $args{pat}"
+        : 'Basic ' . encode_base64( "$args{username}:$args{password}", '' ) )
+      unless $args{anonymous};
 
     for my $ua ($rest->getUseragent) {
         # Configure UserAgent name
@@ -519,7 +521,8 @@ during construction.
 
 The username and password of a Jira user to use for authentication.
 
-If B<anonymous> is false then, if either B<username> or B<password> isn't
+If B<anonymous> is false and no B<pat> given, then,
+if either B<username> or B<password> isn't
 defined the module looks them up in either the C<.netrc> file or via
 L<Config::Identity> (which allows C<gpg> encrypted credentials).
 
@@ -557,6 +560,15 @@ pass L<LWP::UserAgent>'s verification methods.
 Tells the module that you want to connect to the specified Jira server with
 no username or password.  This way you can access public Jira servers
 without needing to authenticate.
+
+=item * B<pat>
+
+Use a personal access token (PAT) for authentication instead of username and
+password.
+This option is available since Jira version 8.14.
+Please refer to
+L<https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html>
+for detqils.
 
 =back
 
