@@ -14,11 +14,9 @@ use JSON 2.23;
 use REST::Client;
 use HTTP::CookieJar::LWP;
 
-sub new {
-    my $class = shift; # this always has to come first!
-
+sub _normalize_args {
     # Valid option names in the order expected by the old-form constructor
-    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat/;
+    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat _session_wanted/;
 
     my %args;
 
@@ -31,6 +29,14 @@ sub new {
         # The old-form constructor expects a list of positional parameters.
         @args{@opts} = @_;
     }
+
+    %args;
+}
+
+sub new {
+    my $class = shift; # this always has to come first!
+
+    my %args = &_normalize_args;
 
     # Turn the url into a URI object
     if (! $args{url}) {
@@ -92,7 +98,7 @@ sub new {
     $rest->addHeader( Authorization => $args{pat}
         ? "Bearer $args{pat}"
         : 'Basic ' . encode_base64( "$args{username}:$args{password}", '' ) )
-      unless $args{anonymous};
+      unless $args{anonymous} || $args{_session_wanted};
 
     for my $ua ($rest->getUseragent) {
         # Configure UserAgent name
@@ -117,8 +123,18 @@ sub new {
 }
 
 sub new_session {
-    my ($class, @args) = @_;
-    my $jira = $class->new(@args);
+    my $class = shift;
+    my %args = &_normalize_args;;
+
+    delete $args{pat}
+      and carp __PACKAGE__ . "::new_session: Sessions do not support personal access tokens (PATs).\n";
+
+    delete $args{anonymous}
+      and carp __PACKAGE__ . "::new_session: You cannot have anonymous sessions.\n";
+
+    $args{_session_wanted} = 1;
+
+    my $jira = $class->new(\%args);
     $jira->{_session} = $jira->POST('/rest/auth/1/session', undef, {
         username => $jira->{args}{username},
         password => $jira->{args}{password},
