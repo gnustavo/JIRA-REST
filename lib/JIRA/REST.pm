@@ -18,7 +18,7 @@ sub new {
     my $class = shift; # this always has to come first!
 
     # Valid option names in the order expected by the old-form constructor
-    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat/;
+    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat session/;
 
     my %args;
 
@@ -108,22 +108,30 @@ sub new {
         $ua->cookie_jar(HTTP::CookieJar::LWP->new());
     }
 
-    return bless {
+    my $jira = bless {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
         api  => $api,
-        args => \%args,
     } => $class;
+
+    $jira->{_session} = $jira->POST('/rest/auth/1/session', undef, {
+        username => $args{username},
+        password => $args{password},
+    }) if $args{session};
+
+    return $jira;
 }
 
 sub new_session {
     my ($class, @args) = @_;
-    my $jira = $class->new(@args);
-    $jira->{_session} = $jira->POST('/rest/auth/1/session', undef, {
-        username => $jira->{args}{username},
-        password => $jira->{args}{password},
-    });
-    return $jira;
+
+    if (@args == 1 && ref $args[0] && ref $args[0] eq 'HASH') {
+        $args[0]{session} = 1;
+    } else {
+        $args[8] = 1;
+    }
+
+    return $class->new(@args);
 }
 
 sub DESTROY {
@@ -476,7 +484,7 @@ endpoints have a path prefix of C</rest/agile/VERSION>.
 
 =head2 new HASHREF
 
-=head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, ANONYMOUS, PROXY, SSL_VERIFY_NONE
+=head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, PROXY, SSL_VERIFY_NONE, ANONYMOUS, PAT, SESSION
 
 The default constructor can take its arguments from a single hash reference or
 from a list of positional parameters. The first form is preferred because it
@@ -564,26 +572,30 @@ without needing to authenticate.
 =item * B<pat>
 
 Use a personal access token (PAT) for authentication instead of username and
-password.
-This option is available since Jira version 8.14.
-Please refer to
+password.  This option is available since Jira version 8.14.  Please refer to
 L<https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html>
 for details.
 
-=back
+=item * B<session>
 
-=head2 new_session OPTIONS
-
-This 'session' constructor first invokes the default constructor, passing to it
-all the options it receives. Then it makes a C<POST /rest/auth/1/session> to
-login to Jira, creating a user session.
+Makes a C<POST /rest/auth/1/session> to login to Jira, acquiring a session
+cookie.
 
 This is particularly useful when interacting with Jira Data Center, because it
 can use the session cookie to maintain affinity with one of the redundant
 servers.
 
-When created with this constructor, upon destruction the object makes a C<DELETE
-/rest/auth/1/session> to logout from Jira.
+Upon destruction, the object makes a C<DELETE /rest/auth/1/session> to logout
+from Jira.
+
+=back
+
+=head2 new_session OPTIONS
+
+This alternative constructor simply invokes the default constructor with the
+same options, adding to them the B<session> option. New code should use the
+default constructor with the B<session> option because this constructor may be
+deprecated in the future.
 
 =head1 REST METHODS
 
