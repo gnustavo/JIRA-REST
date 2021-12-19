@@ -15,31 +15,7 @@ use REST::Client;
 use HTTP::CookieJar::LWP;
 
 sub new {
-    my $class = shift; # this always has to come first!
-
-    # Valid option names in the order expected by the old-form constructor
-    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat session/;
-
-    my %args;
-
-    if (@_ == 1 && ref $_[0] && ref $_[0] eq 'HASH') {
-        # The new-form constructor expects a single hash reference.
-        @args{@opts} = delete @{$_[0]}{@opts};
-        croak __PACKAGE__ . "::new: unknown arguments: '", join("', '", sort keys %{$_[0]}), "'.\n"
-            if keys %{$_[0]};
-    } else {
-        # The old-form constructor expects a list of positional parameters.
-        @args{@opts} = @_;
-    }
-
-    # Turn the url into a URI object
-    if (! $args{url}) {
-        croak __PACKAGE__ . "::new: 'url' argument must be defined.\n";
-    } elsif (! ref $args{url}) {
-        $args{url} = URI->new($args{url});
-    } elsif (! $args{url}->isa('URI')) {
-        croak __PACKAGE__ . "::new: 'url' argument must be a URI object.\n";
-    }
+    my ($class, %args) = &_grok_args;
 
     my ($path, $api) = ($args{url}->path, '/rest/api/latest');
     # See if the user wants a default REST API:
@@ -53,10 +29,6 @@ sub new {
         $args{url}->path($path);
     }
 
-    if (!!$args{anonymous} + !!$args{pat} + !!$args{session} > 1) {
-        croak __PACKAGE__ . "::new: 'anonymous', 'pat', and 'session' are mutually exclusive options.\n"
-    }
-
     unless ($args{anonymous} || $args{pat}) {
         # If username and password are not set we try to lookup the credentials
         if (! defined $args{username} || ! defined $args{password}) {
@@ -68,19 +40,6 @@ sub new {
             croak __PACKAGE__ . "::new: '$_' argument must be a non-empty string.\n"
                 if ! defined $args{$_} || ref $args{$_} || length $args{$_} == 0;
         }
-    }
-
-    for ($args{rest_client_config}) {
-        $_ //= {};
-        croak __PACKAGE__ . "::new: 'rest_client_config' argument must be a hash reference.\n"
-            unless defined && ref && ref eq 'HASH';
-    }
-
-    # remove the REST::Client faux config 'proxy' if set and use it later.
-    # This is deprecated since v0.017
-    if (my $proxy = delete $args{rest_client_config}{proxy}) {
-        carp __PACKAGE__ . "::new: passing 'proxy' in the 'rest_client_config' hash is deprecated. Please, use the corresponding argument instead.\n";
-        $args{proxy} //= $proxy;
     }
 
     my $rest = REST::Client->new($args{rest_client_config});
@@ -128,6 +87,53 @@ sub new {
     }) if $args{session};
 
     return $jira;
+}
+
+sub _grok_args {
+    my ($class, @args) = @_;
+
+    # Valid option names in the order expected by the old-form constructor
+    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat session/;
+
+    my %args;
+
+    if (@args == 1 && ref $args[0] && ref $args[0] eq 'HASH') {
+        # The new-form constructor expects a single hash reference.
+        @args{@opts} = delete @{$args[0]}{@opts};
+        croak __PACKAGE__ . "::new: unknown arguments: '", join("', '", sort keys %{$args[0]}), "'.\n"
+            if keys %{$args[0]};
+    } else {
+        # The old-form constructor expects a list of positional parameters.
+        @args{@opts} = @args;
+    }
+
+    # Turn the url into a URI object
+    if (! $args{url}) {
+        croak __PACKAGE__ . "::new: 'url' argument must be defined.\n";
+    } elsif (! ref $args{url}) {
+        $args{url} = URI->new($args{url});
+    } elsif (! $args{url}->isa('URI')) {
+        croak __PACKAGE__ . "::new: 'url' argument must be a URI object.\n";
+    }
+
+    if (!!$args{anonymous} + !!$args{pat} + !!$args{session} > 1) {
+        croak __PACKAGE__ . "::new: 'anonymous', 'pat', and 'session' are mutually exclusive options.\n"
+    }
+
+    for ($args{rest_client_config}) {
+        $_ //= {};
+        croak __PACKAGE__ . "::new: 'rest_client_config' argument must be a hash reference.\n"
+            unless defined && ref && ref eq 'HASH';
+    }
+
+    # remove the REST::Client faux config 'proxy' if set and use it later.
+    # This is deprecated since v0.017
+    if (my $proxy = delete $args{rest_client_config}{proxy}) {
+        carp __PACKAGE__ . "::new: passing 'proxy' in the 'rest_client_config' hash is deprecated. Please, use the corresponding argument instead.\n";
+        $args{proxy} //= $proxy;
+    }
+
+    return ($class, %args);
 }
 
 sub new_session {
