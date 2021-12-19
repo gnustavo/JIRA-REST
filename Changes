@@ -2,6 +2,29 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.022     2021-12-19 16:22:52-03:00 America/Sao_Paulo
+
+  [Deprecation]
+
+  - The new_session constructor is deprecated. New code should use the 'session'
+    argument to the default constructor.
+
+  [New features]
+
+  - Martin Sluka kindly added support for Personal Access Tokens so that it's
+    now possible to authenticate without usernames and passwords. This requires
+    at least Jira 8.14.
+
+  - Add the 'session' argument to the constructor.
+
+  [Enhancement]
+
+  - Martin Sluka also kindly contributed code to make JIRA::REST do not send
+    Authorization HTTP headers if we've set up a session. This lessens the
+    burden to Jira, which may be significant for scripts making lots of calls.
+
+  - The example scripts were refactored to be modernized.
+
 0.021     2021-02-05 22:14:44-03:00 America/Sao_Paulo
 
   [Deprecation]
