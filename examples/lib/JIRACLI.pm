@@ -1,41 +1,47 @@
 #!/usr/bin/env perl
 
+package JIRACLI;
+
 use 5.016;
 use utf8;
 use warnings;
-
-package JIRACLI;
-
 use JIRA::REST;
+use IO::Interactive qw(is_interactive);
+use IO::Prompter;
+use Carp;
 
-use vars qw($VERSION @ISA @EXPORT_OK);
-
-require Exporter;
-
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(get_credentials);
-$VERSION = '0.01';
+use parent qw(Exporter);
+our @EXPORT_OK = qw(get_credentials);
+our $VERSION = '0.02';
 
 sub get_credentials {
-
-    my ($user, $pass) = @ENV{'jirauser', 'jirapass'};
+    my ($user, $pass) = @ENV{qw/jirauser jirapass/};
 
     return ($user, $pass) if defined $user && defined $pass;
 
-    if (! -t STDIN) {
-        die "Cannot prompt user for credentials because STDIN isn't a terminal. Please set environment variables jirauser and jirapass\n";
+    unless (is_interactive()) {
+        # We cannot prompt the user if we're not talking to a
+        # terminal.
+        croak "Cannot prompt user for credentials because STDIN isn't a terminal.\n";
     }
 
-    require Term::Prompt;
-    Term::Prompt->import();
-
     if (!defined $user) {
-        $user = prompt('x', "Enter Username: ", '', '');
+        $user = prompt(
+            -prompt  => "Username:",
+            -in      => \*STDIN,
+            -out     => \*STDERR,
+            -verbatim,
+        );
     }
 
     if (! defined $pass) {
-        $pass = prompt('p', "Enter Password: ", '', '');
-        print "\n";
+        $pass = prompt(
+            -prompt  => "Password:",
+            -in      => \*STDIN,
+            -out     => \*STDERR,
+            -echo    => '*',
+            -verbatim,
+        );
     }
 
     return ($user, $pass);
@@ -73,7 +79,7 @@ If no environment variables set will prompt interactively for entry of user and 
 
 =head1 COPYRIGHT
 
-Copyright 2016 CPQD.
+Copyright 2016-2021 CPQD.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

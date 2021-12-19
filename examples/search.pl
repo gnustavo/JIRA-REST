@@ -9,7 +9,6 @@ use lib "$FindBin::Bin/lib";
 use Getopt::Long::Descriptive;
 use JIRACLI qw/get_credentials/;
 
-
 my ($opt, $usage) = describe_options(
     '%c %o',
     ['jiraurl=s',   "JIRA server base URL", {default => 'https://jira.cpqd.com.br'}],
@@ -23,10 +22,15 @@ if ($opt->help) {
     exit 0;
 }
 
-my $jira = JIRA::REST->new(
-    $opt->jiraurl,
-    get_credentials(),
-);
+my ($username, $password) = get_credentials();
+
+# Scripts which make lots of calls to Jira should set up a session to be gentle.
+my $jira = JIRA::REST->new({
+    url => $opt->jiraurl,
+    username => $username,
+    password => $password,
+    session => 1,
+});
 
 $jira->set_search_iterator({
     jql    => $opt->jql,
@@ -35,13 +39,15 @@ $jira->set_search_iterator({
 
 while (my $issue = $jira->next_issue) {
     my $fields = $issue->{fields};
-    print "ID: $issue->{id}\n";
-    print "Summary: $fields->{summary}\n";
-    print "Type: $fields->{issuetype}{name}\n";
-    print "Status: $fields->{status}{name}\n";
-    print "Priority: $fields->{priority}{name}\n";
-    print "Assignee: $fields->{assignee}{name}\n";
-    print "Reporter: $fields->{reporter}{name}\n\n";
+    print <<"EOS";
+ID: $issue->{id}
+Summary: $fields->{summary}
+Type: $fields->{issuetype}{name}
+Status: $fields->{status}{name}
+Priority: $fields->{priority}{name}
+Reporter: $fields->{reporter}{name}
+
+EOS
 }
 
 __END__

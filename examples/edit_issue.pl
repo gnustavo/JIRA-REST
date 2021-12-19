@@ -40,7 +40,7 @@ foreach my $assign (@{$opt->assign}) {
             $assignments{$key} = $value;
         }
     } else {
-        die "Invalid assignment specification: $assign";
+        die "Invalid assignment specification: $assign\n";
     }
 }
 
