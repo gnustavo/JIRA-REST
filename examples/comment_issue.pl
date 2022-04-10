@@ -10,7 +10,7 @@ use JIRACLI qw/get_credentials/;
 
 my ($opt, $usage) = describe_options(
     '%c %o',
-    ['jiraurl=s',   "JIRA server base URL", {default => 'https://jira.cpqd.com.br'}],
+    ['jiraurl=s',   "JIRA server base URL", {required => 1}],
     ['issue|i=s',    "Key of the issue to progress", {required => 1}],
     ['comment|c=s', "Comment body", {required => 1}],
     ['visibility' => 'hidden' => {'one_of' => [
@@ -42,6 +42,7 @@ if (my $type = $opt->visibility) {
 
 $jira->POST("/issue/@{[$opt->issue]}/comment", undef, $comment);
 
+
 __END__
 =encoding utf8
 
@@ -53,7 +54,6 @@ comment_issue.pl - Comment a JIRA issue
 
   comment_issue.pl [-ghir] [long options...]
     --jiraurl STR        JIRA server base URL
-                         (default value: https://jira.cpqd.com.br)
     -i STR --issue STR   Key of the issue to progress
     -c STR --comment STR Comment body
     -g STR --group STR   Group to restrict visibility to
@@ -97,7 +97,7 @@ See the L<JIRACLI> documentation.
 
 =head1 COPYRIGHT
 
-Copyright 2019 CPQD.
+Copyright 2019-2022 CPQD.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

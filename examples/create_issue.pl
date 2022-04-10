@@ -10,7 +10,7 @@ use JIRACLI qw/get_credentials/;
 
 my ($opt, $usage) = describe_options(
     '%c %o',
-    ['jiraurl=s',   "JIRA server base URL", {default => 'https://jira.cpqd.com.br'}],
+    ['jiraurl=s',   "JIRA server base URL", {required => 1}],
     ['project|p=s',  "Project to create issue under", {required => 1}],
     ['summary|s=s',  "Issue summary", {required => 1}],
     ['description|d=s',  "Issue description", {required => 1}],
@@ -45,6 +45,7 @@ my $res = $jira->POST('/issue', undef, $data);
 
 print "Issue created ID: $res->{id}\n";
 
+
 __END__
 =encoding utf8
 
@@ -56,7 +57,6 @@ create_issue.pl - Creates an issue
 
   create_issue.pl [-hn] [long options...]
     --jiraurl STR   JIRA server base URL
-                    (default value: https://jira.cpqd.com.br)
     --project STR   The project key
     --summary STR   Issue Summary
     --description   Issue Description
@@ -74,7 +74,7 @@ See the L<JIRACLI> documentation.
 
 =head1 COPYRIGHT
 
-Copyright 2016 CPQD.
+Copyright 2016-2022 CPQD.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

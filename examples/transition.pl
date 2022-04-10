@@ -11,7 +11,7 @@ use JIRACLI qw/get_credentials/;
 
 my ($opt, $usage) = describe_options(
     '%c %o',
-    ['jiraurl=s',   "JIRA server base URL", {default => 'https://jira.cpqd.com.br'}],
+    ['jiraurl=s',   "JIRA server base URL", {required => 1}],
     ['issue|i=s',         "Key of the issue to progress", {required => 1}],
     ['transition-id|t=i', "ID of the transition to make", {required => 1}],
     ['resolution|r=s', "Resolution name to set"],
@@ -51,7 +51,6 @@ transition.pl - Make a transition in a JIRA issue
 
   transition.pl [-hn] [long options...]
     --jiraurl STR         JIRA server base URL
-                          (default value: https://jira.cpqd.com.br)
     --issue STR           Key of the issue to progress
     --transition-id INT   ID of the transition to make
     --resolution STR      Resolution name to set
@@ -99,7 +98,7 @@ See the L<JIRACLI> documentation.
 
 =head1 COPYRIGHT
 
-Copyright 2016 CPQD.
+Copyright 2016-2022 CPQD.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

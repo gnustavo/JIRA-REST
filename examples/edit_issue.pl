@@ -10,7 +10,7 @@ use JIRACLI qw/get_credentials/;
 
 my ($opt, $usage) = describe_options(
     '%c %o',
-    ['jiraurl=s',   "JIRA server base URL", {default => 'https://jira.cpqd.com.br'}],
+    ['jiraurl=s',   "JIRA server base URL", {required => 1}],
     ['issue|i=s',    "Key of the issue to progress", {required => 1}],
     ['assign|a=s@',  "Set of KEY[.ATTR]=VALUE assignments to perform", { required => 1 }],
     ['nonotify',   "Supress email notification about the change."],
@@ -49,6 +49,7 @@ $data->{notifyUsers} = 'false' if $opt->nonotify;
 
 $jira->PUT("/issue/@{[$opt->issue]}", undef, $data);
 
+
 __END__
 =encoding utf8
 
@@ -60,7 +61,6 @@ edit_issue.pl - Edit a JIRA issue
 
   edit.pl [-h] [long options...]
     --jiraurl STR     JIRA server base URL
-                      (default value: https://jira.cpqd.com.br)
     --issue STR       Key of the issue to progress
     --assign STR...   Set of KEY[.ATTR]=VALUE assignments to perform
     --nonotify        Supress email notification about the change.
@@ -109,7 +109,7 @@ See the L<JIRACLI> documentation.
 
 =head1 COPYRIGHT
 
-Copyright 2016 CPQD.
+Copyright 2016-2022 CPQD.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
