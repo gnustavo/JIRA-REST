@@ -787,7 +787,8 @@ interface to attach files to issues.
 
 =head1 PERL AND JIRA COMPATIBILITY POLICY
 
-Currently L<JIRA::REST> requires Perl 5.16 and supports Jira 7.0.
+Currently L<JIRA::REST> requires Perl 5.16 and is tested on Jira Data Center
+8.13.
 
 We try to be compatible with the Perl native packages of the oldest L<Ubuntu
 LTS|https://www.ubuntu.com/info/release-end-of-life> and
@@ -797,10 +798,10 @@ getting maintainance updates.
   +-------------+-----------------------+------+
   | End of Life | Distro                | Perl |
   +-------------+-----------------------+------+
-  |   2021-04   | Ubuntu 16.04 (xenial) | 5.22 |
   |   2023-04   | Ubuntu 18.04 (bionic) | 5.26 |
   |   2024-07   | CentOS 7              | 5.16 |
-  |   2025-04   | Ubuntu 20.04 (focal ) | 5.30 |
+  |   2025-04   | Ubuntu 20.04 (focal)  | 5.30 |
+  |   2027-04   | Ubuntu 22.04 (jammy)  | 5.34 |
   |   2029-05   | CentOS 8              | 5.26 |
   +-------------+-----------------------+------+
 
