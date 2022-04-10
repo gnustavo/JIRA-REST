@@ -346,6 +346,11 @@ sub POST {
     return $self->_content();
 }
 
+sub rest_client {
+    my ($self) = @_;
+    return $self->{rest};
+}
+
 sub set_search_iterator {
     my ($self, $params) = @_;
 
@@ -748,6 +753,11 @@ Updates RESOURCE based on VALUE.
 =head1 UTILITY METHODS
 
 This module provides a few utility methods.
+
+=head2 B<rest_client>
+
+Returns the L<REST::Client> object used to interact with Jira. It may be useful
+when the Jira API isn't enough and you have to go deeper.
 
 =head2 B<set_search_iterator> PARAMS
 
