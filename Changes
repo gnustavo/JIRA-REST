@@ -2,6 +2,20 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.023     2022-04-10 20:54:14-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - Implement the new JIRA::REST::rest_client auxiliary method to make it
+    OK to get to the underlying REST::Client object.
+
+  [Documentation]
+
+  - Implement two new example scripts showing how to deal with attachments. The
+    download_attachment.pl script uses the new J::R::rest_client method.
+
+  - Update the Perl and Jira Compatibility Policy section.
+
 0.022     2021-12-19 16:22:52-03:00 America/Sao_Paulo
 
   [Deprecation]
