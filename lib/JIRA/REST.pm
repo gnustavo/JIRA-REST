@@ -300,9 +300,6 @@ sub DELETE {
 sub PUT {
     my ($self, $path, $query, $value, $headers) = @_;
 
-    defined $value
-        or croak $self->_error("PUT method's 'value' argument is undefined.");
-
     $path = $self->_build_path($path, $query);
 
     $headers                   ||= {};
@@ -315,9 +312,6 @@ sub PUT {
 
 sub POST {
     my ($self, $path, $query, $value, $headers) = @_;
-
-    defined $value
-        or croak $self->_error("POST method's 'value' argument is undefined.");
 
     $path = $self->_build_path($path, $query);
 
