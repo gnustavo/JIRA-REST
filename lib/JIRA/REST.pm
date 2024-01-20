@@ -222,31 +222,14 @@ sub _error {
     if ($type =~ m:text/plain:i) {
         $msg .= $content;
     } elsif ($type =~ m:application/json:) {
-        my $error = $self->{json}->decode($content);
-        if (ref $error eq 'HASH') {
-            # Jira errors may be laid out in all sorts of ways. You have to
-            # look them up from the scant documentation at
-            # https://docs.atlassian.com/jira/REST/latest/.
-
-            # /issue/bulk tucks the errors one level down, inside the
-            # 'elementErrors' hash.
-            $error = $error->{elementErrors} if exists $error->{elementErrors};
-
-            # Some methods tuck the errors in the 'errorMessages' array.
-            if (my $errorMessages = $error->{errorMessages}) {
-                $msg .= "- $_\n" foreach @$errorMessages;
-            }
-
-            # And some tuck them in the 'errors' hash.
-            if (my $errors = $error->{errors}) {
-                $msg .= "- [$_] $errors->{$_}\n" foreach sort keys %$errors;
-            }
-
-            # some give us a single message in 'errorMessage'
-            $msg .= $error->{errorMessage} . qq{\n} if $error->{errorMessage};
-        } else {
-            $msg .= $content;
-        }
+        # Jira errors may be laid out in all sorts of ways. You have to look
+        # them up from the scant documentation at
+        # https://docs.atlassian.com/jira/REST/latest/.  Previously, I tried to
+        # grok the actual message inside this JSON structure but I failed
+        # miserably. So, I decided to give up and simply show the actual JSON
+        # string as a message. It won't be as readable, but it will be complete
+        # and correct!
+        $msg .= $content;
     } elsif ($type =~ m:text/html:i && eval {require HTML::TreeBuilder}) {
         $msg .= HTML::TreeBuilder->new_from_content($content)->as_text;
     } elsif ($type =~ m:^(text/|application|xml):i) {
