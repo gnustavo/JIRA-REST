@@ -2,6 +2,17 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.024     2024-01-21 14:05:30-03:00 America/Sao_Paulo
+
+  [Enhancement]
+
+  - JIRA::REST gives up on trying to decode the error messages returned by
+    Jira. They are inconsistent and undocumented, as far as I know. From now on,
+    we simply show the JSON object containing the error message.
+
+  - Don't croak anymore on the PUT and POST methods when the third argument
+    (value) is undefined. There are API endpoints for which this makes sense.
+
 0.023     2022-04-10 20:54:14-03:00 America/Sao_Paulo
 
   [New features]
