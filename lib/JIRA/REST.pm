@@ -719,11 +719,11 @@ Returns the RESOURCE as a Perl data structure.
 
 Deletes the RESOURCE.
 
-=head2 PUT RESOURCE, QUERY, VALUE [, HEADERS]
+=head2 POST RESOURCE, QUERY, VALUE [, HEADERS]
 
 Creates RESOURCE based on VALUE.
 
-=head2 POST RESOURCE, QUERY, VALUE [, HEADERS]
+=head2 PUT RESOURCE, QUERY, VALUE [, HEADERS]
 
 Updates RESOURCE based on VALUE.
 
