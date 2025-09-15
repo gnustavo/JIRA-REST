@@ -17,7 +17,7 @@ use HTTP::CookieJar::LWP;
 sub new {
     my ($class, %args) = &_grok_args;
 
-    my ($path, $api) = ($args{url}->path, '/rest/api/latest');
+    my ($path, $api) = ($args{url}->path, '/rest/api/3');
     # See if the user wants a default REST API:
     if ($path =~ s:(/rest/.*)$::) {
         $api = $1;
@@ -350,18 +350,34 @@ sub set_search_iterator {
 
 sub next_issue {
     my ($self) = @_;
-
     my $iter = $self->{iter}
         or croak $self->_error("You must call set_search_iterator before calling next_issue");
 
     if ($iter->{offset} == $iter->{results}{total}) {
-        # This is the end of the search results
         $self->{iter} = undef;
         return;
     } elsif ($iter->{offset} == $iter->{results}{startAt} + @{$iter->{results}{issues}}) {
-        # Time to get the next bunch of issues
-        $iter->{params}{startAt} = $iter->{offset};
-        $iter->{results}         = $self->POST('/search', undef, $iter->{params});
+        my %params = %{$iter->{params}};
+        my $jql = delete $params{jql};
+
+        # Use the format we know works
+        my $search_request = {
+            jql => $jql,
+            fields => ["*all"]
+        };
+
+        my $result = $self->POST('/search/jql', undef, $search_request);
+
+        if ($result) {
+            # Convert the new /search/jql response format to match the old /search format
+            my $converted_result = {
+                startAt => 0,
+                total => scalar(@{$result->{issues} // []}),
+                issues => $result->{issues} // [],
+            };
+
+            $iter->{results} = $converted_result;
+        }
     }
 
     return $iter->{results}{issues}[$iter->{offset}++ - $iter->{results}{startAt}];
@@ -379,7 +395,7 @@ sub attach_files {
     # FIXME: How to attach all files at once?
     foreach my $file (@files) {
         my $response = $rest->getUseragent()->post(
-            $rest->getHost . "/rest/api/latest/issue/$issueIdOrKey/attachments",
+            $rest->getHost . "/rest/api/3/issue/$issueIdOrKey/attachments",
             %{$rest->{_headers}},
             'X-Atlassian-Token' => 'nocheck',
             'Content-Type'      => 'form-data',
