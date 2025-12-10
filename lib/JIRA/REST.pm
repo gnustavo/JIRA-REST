@@ -17,7 +17,7 @@ use HTTP::CookieJar::LWP;
 sub new {
     my ($class, %args) = &_grok_args;
 
-    my ($path, $api) = ($args{url}->path, '/rest/api/latest');
+    my ($path, $api) = ($args{url}->path, '/rest/api/3');
     # See if the user wants a default REST API:
     if ($path =~ s:(/rest/.*)$::) {
         $api = $1;
@@ -333,16 +333,14 @@ sub set_search_iterator {
 
     my %params = ( %$params );  # rebuild the hash to own it
 
-    $params{startAt} = 0;
-
     $self->{iter} = {
         params  => \%params,    # params hash to be used in the next call
         offset  => 0,           # offset of the next issue to be fetched
         results => {            # results of the last call (this one is fake)
-            startAt => 0,
-            total   => -1,
-            issues  => [],
+            isLast => 0,
+            issues => [],
         },
+        nextPageToken => undef, # token for next page
     };
 
     return;
@@ -350,21 +348,48 @@ sub set_search_iterator {
 
 sub next_issue {
     my ($self) = @_;
-
     my $iter = $self->{iter}
         or croak $self->_error("You must call set_search_iterator before calling next_issue");
 
-    if ($iter->{offset} == $iter->{results}{total}) {
-        # This is the end of the search results
-        $self->{iter} = undef;
-        return;
-    } elsif ($iter->{offset} == $iter->{results}{startAt} + @{$iter->{results}{issues}}) {
-        # Time to get the next bunch of issues
-        $iter->{params}{startAt} = $iter->{offset};
-        $iter->{results}         = $self->POST('/search', undef, $iter->{params});
+    if ($iter->{offset} >= @{$iter->{results}{issues}}) {
+        # If we've already reached the last page, we're done
+        if ($iter->{results}{isLast}) {
+            $self->{iter} = undef;
+            return;
+        }
+
+        my %params = %{$iter->{params}};
+        my $jql = delete $params{jql};
+
+        # Use the format we know works
+        my $search_request = {
+            jql => $jql,
+            fields => ["*all"]
+        };
+
+        # Add nextPageToken if we have one
+        if ($iter->{nextPageToken}) {
+            $search_request->{nextPageToken} = $iter->{nextPageToken};
+        }
+
+        my $result = $self->POST('/search/jql', undef, $search_request);
+
+        if ($result) {
+            $iter->{results} = {
+                isLast => $result->{isLast} // 0,
+                issues => $result->{issues} // [],
+            };
+            # nextPageToken will be null/undefined on the last page
+            $iter->{nextPageToken} = $result->{nextPageToken};
+            $iter->{offset} = 0;  # Reset offset for the new page
+        } else {
+            # No more results
+            $self->{iter} = undef;
+            return;
+        }
     }
 
-    return $iter->{results}{issues}[$iter->{offset}++ - $iter->{results}{startAt}];
+    return $iter->{results}{issues}[$iter->{offset}++];
 }
 
 sub attach_files {
@@ -379,7 +404,7 @@ sub attach_files {
     # FIXME: How to attach all files at once?
     foreach my $file (@files) {
         my $response = $rest->getUseragent()->post(
-            $rest->getHost . "/rest/api/latest/issue/$issueIdOrKey/attachments",
+            $rest->getHost . "/rest/api/3/issue/$issueIdOrKey/attachments",
             %{$rest->{_headers}},
             'X-Atlassian-Token' => 'nocheck',
             'Content-Type'      => 'form-data',
@@ -441,7 +466,6 @@ __END__
     # Iterate on issues
     my $search = $jira->POST('/search', undef, {
         jql        => 'project = "TST" and status = "open"',
-        startAt    => 0,
         maxResults => 16,
         fields     => [ qw/summary status assignee/ ],
     });
@@ -741,8 +765,8 @@ when the Jira API isn't enough and you have to go deeper.
 Sets up an iterator for the search specified by the hash reference PARAMS.
 It must be called before calls to B<next_issue>.
 
-PARAMS must conform with the query parameters allowed for the
-C</rest/api/2/search> Jira REST endpoint.
+PARAMS must conform with the body parameters allowed for the
+C</rest/api/3/search/jql> Jira REST endpoint.
 
 =head2 B<next_issue>
 
@@ -751,8 +775,8 @@ returns a reference to the next issue from the filter. When there are no
 more issues it returns undef.
 
 Using the set_search_iterator/next_issue utility methods you can iterate
-through large sets of issues without worrying about the startAt/total/offset
-attributes in the response from the /search REST endpoint. These methods
+through large sets of issues without worrying about the isLast/nextPageToken
+pagination attributes in the response from the /search/jql REST endpoint. These methods
 implement the "paging" algorithm needed to work with those attributes.
 
 =head2 B<attach_files> ISSUE FILE...
