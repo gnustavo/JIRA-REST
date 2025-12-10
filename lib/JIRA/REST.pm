@@ -333,16 +333,14 @@ sub set_search_iterator {
 
     my %params = ( %$params );  # rebuild the hash to own it
 
-    $params{startAt} = 0;
-
     $self->{iter} = {
         params  => \%params,    # params hash to be used in the next call
         offset  => 0,           # offset of the next issue to be fetched
         results => {            # results of the last call (this one is fake)
-            startAt => 0,
-            total   => -1,
-            issues  => [],
+            isLast => 0,
+            issues => [],
         },
+        nextPageToken => undef, # token for next page
     };
 
     return;
@@ -353,10 +351,13 @@ sub next_issue {
     my $iter = $self->{iter}
         or croak $self->_error("You must call set_search_iterator before calling next_issue");
 
-    if ($iter->{offset} == $iter->{results}{total}) {
-        $self->{iter} = undef;
-        return;
-    } elsif ($iter->{offset} == $iter->{results}{startAt} + @{$iter->{results}{issues}}) {
+    if ($iter->{offset} >= @{$iter->{results}{issues}}) {
+        # If we've already reached the last page, we're done
+        if ($iter->{results}{isLast}) {
+            $self->{iter} = undef;
+            return;
+        }
+
         my %params = %{$iter->{params}};
         my $jql = delete $params{jql};
 
@@ -366,21 +367,29 @@ sub next_issue {
             fields => ["*all"]
         };
 
+        # Add nextPageToken if we have one
+        if ($iter->{nextPageToken}) {
+            $search_request->{nextPageToken} = $iter->{nextPageToken};
+        }
+
         my $result = $self->POST('/search/jql', undef, $search_request);
 
         if ($result) {
-            # Convert the new /search/jql response format to match the old /search format
-            my $converted_result = {
-                startAt => 0,
-                total => scalar(@{$result->{issues} // []}),
+            $iter->{results} = {
+                isLast => $result->{isLast} // 0,
                 issues => $result->{issues} // [],
             };
-
-            $iter->{results} = $converted_result;
+            # nextPageToken will be null/undefined on the last page
+            $iter->{nextPageToken} = $result->{nextPageToken};
+            $iter->{offset} = 0;  # Reset offset for the new page
+        } else {
+            # No more results
+            $self->{iter} = undef;
+            return;
         }
     }
 
-    return $iter->{results}{issues}[$iter->{offset}++ - $iter->{results}{startAt}];
+    return $iter->{results}{issues}[$iter->{offset}++];
 }
 
 sub attach_files {
@@ -457,7 +466,6 @@ __END__
     # Iterate on issues
     my $search = $jira->POST('/search', undef, {
         jql        => 'project = "TST" and status = "open"',
-        startAt    => 0,
         maxResults => 16,
         fields     => [ qw/summary status assignee/ ],
     });
@@ -757,8 +765,8 @@ when the Jira API isn't enough and you have to go deeper.
 Sets up an iterator for the search specified by the hash reference PARAMS.
 It must be called before calls to B<next_issue>.
 
-PARAMS must conform with the query parameters allowed for the
-C</rest/api/2/search> Jira REST endpoint.
+PARAMS must conform with the body parameters allowed for the
+C</rest/api/3/search/jql> Jira REST endpoint.
 
 =head2 B<next_issue>
 
@@ -767,8 +775,8 @@ returns a reference to the next issue from the filter. When there are no
 more issues it returns undef.
 
 Using the set_search_iterator/next_issue utility methods you can iterate
-through large sets of issues without worrying about the startAt/total/offset
-attributes in the response from the /search REST endpoint. These methods
+through large sets of issues without worrying about the isLast/nextPageToken
+pagination attributes in the response from the /search/jql REST endpoint. These methods
 implement the "paging" algorithm needed to work with those attributes.
 
 =head2 B<attach_files> ISSUE FILE...
