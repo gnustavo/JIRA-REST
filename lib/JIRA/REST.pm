@@ -596,7 +596,7 @@ L<https://confluence.atlassian.com/enterprise/using-personal-access-tokens-10260
 for details. If enabled, the B<username> and B<password> arguments are
 disregarded.
 
-The booleal B<session> argument tells the module if you want it to acquire a
+The boolean B<session> argument tells the module if you want it to acquire a
 session cookie by making a C<POST /rest/auth/1/session> call to login to
 Jira. This is particularly useful when interacting with Jira Data Center,
 because it can use the session cookie to maintain affinity with one of the
@@ -764,31 +764,25 @@ interface to attach files to issues.
 
 =head1 PERL AND JIRA COMPATIBILITY POLICY
 
-Currently L<JIRA::REST> requires Perl 5.16 and is tested on Jira Data Center
-8.13.
+Currently L<JIRA::REST> requires Perl 5.34 and is tested on Jira Data Center
+11.3.7.
 
 We try to be compatible with the Perl native packages of the oldest L<Ubuntu
-LTS|https://www.ubuntu.com/info/release-end-of-life> and
-L<CentOS|https://wiki.centos.org/About/Product> Linux distributions still
-getting maintainance updates.
+LTS|https://www.ubuntu.com/info/release-end-of-life> Linux distribution still
+getting maintenance updates.
 
-  +-------------+-----------------------+------+
-  | End of Life | Distro                | Perl |
-  +-------------+-----------------------+------+
-  |   2023-04   | Ubuntu 18.04 (bionic) | 5.26 |
-  |   2024-07   | CentOS 7              | 5.16 |
-  |   2025-04   | Ubuntu 20.04 (focal)  | 5.30 |
-  |   2027-04   | Ubuntu 22.04 (jammy)  | 5.34 |
-  |   2029-05   | CentOS 8              | 5.26 |
-  +-------------+-----------------------+------+
-
-As you can see, we're kept behind mostly by the slow pace of CentOS (actually,
-RHEL) releases.
+  +-------------+-------------------------+------+
+  | End of Life | Distro                  | Perl |
+  +-------------+-------------------------+------+
+  |   2027-04   | Ubuntu 22.04 (jammy)    | 5.34 |
+  |   2029-04   | Ubuntu 24.04 (noble)    | 5.38 |
+  |   2031-04   | Ubuntu 26.04 (resolute) | 5.40 |
+  +-------------+-------------------------+------+
 
 As for Jira, the policy is very lax. I (the author) only test L<JIRA::REST> on
-the Jira server installed in the company I work for, which is usually (but not
-always) at most one year older than the newest released version. I don't have
-yet an easy way to test it on different versions.
+the Jira Data Center installed in the company I work for, which is usually (but
+not always) at most one year older than the newest released version. I don't
+have yet an easy way to test it on different versions.
 
 =head1 SEE ALSO
 
