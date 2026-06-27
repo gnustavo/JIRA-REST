@@ -1,6 +1,6 @@
 # -*- cperl -*-
 
-use 5.016;
+use 5.034;
 use warnings;
 use lib 't';
 use Test::More;

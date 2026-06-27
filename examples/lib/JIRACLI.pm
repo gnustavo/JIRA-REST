@@ -2,7 +2,7 @@
 
 package JIRACLI;
 
-use 5.016;
+use 5.034;
 use utf8;
 use warnings;
 use JIRA::REST;
