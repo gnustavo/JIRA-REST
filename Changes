@@ -13,6 +13,9 @@ Revision history for perl module JIRA-REST. -*- text -*-
   - The new_session constructor was deprecated on version 0.022 and is now
     removed.
 
+  - The 'proxy' key to the REST::Client hash was deprecated on version 0.017 and
+    is now removed.
+
 0.024     2024-01-21 14:05:30-03:00 America/Sao_Paulo
 
   [Enhancement]

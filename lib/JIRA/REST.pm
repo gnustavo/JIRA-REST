@@ -126,13 +126,6 @@ sub _grok_args {
             unless defined && ref && ref eq 'HASH';
     }
 
-    # remove the REST::Client faux config 'proxy' if set and use it later.
-    # This is deprecated since v0.017
-    if (my $proxy = delete $args{rest_client_config}{proxy}) {
-        carp __PACKAGE__ . "::new: passing 'proxy' in the 'rest_client_config' hash is deprecated. Please, use the corresponding argument instead.\n";
-        $args{proxy} //= $proxy;
-    }
-
     return ($class, %args);
 }
 
@@ -544,12 +537,6 @@ A JIRA::REST object uses a L<REST::Client> object to make the REST
 invocations. This optional argument must be a hash reference that can be fed
 to the REST::Client constructor. Note that the C<url> argument
 overwrites any value associated with the C<host> key in this hash.
-
-As an extension, the hash reference also accepts one additional argument
-called B<proxy> that is an extension to the REST::Client configuration and
-will be removed from the hash before passing it on to the REST::Client
-constructor. However, this argument is deprecated since v0.017 and you
-should avoid it. Use the following argument instead.
 
 =item * B<proxy>
 
