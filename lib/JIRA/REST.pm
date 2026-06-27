@@ -99,9 +99,9 @@ sub _grok_args {
 
     if (@args == 1 && ref $args[0] && ref $args[0] eq 'HASH') {
         # The new-form constructor expects a single hash reference.
-        @args{@opts} = delete @{$args[0]}{@opts};
-        croak __PACKAGE__ . "::new: unknown arguments: '", join("', '", sort keys %{$args[0]}), "'.\n"
-            if keys %{$args[0]};
+        @args{@opts} = delete $args[0]->@{@opts};
+        croak __PACKAGE__ . "::new: unknown arguments: '", join("', '", sort keys $args[0]->%*), "'.\n"
+            if keys $args[0]->%*;
     } else {
         # The old-form constructor expects a list of positional parameters.
         @args{@opts} = @args;
@@ -358,7 +358,7 @@ sub next_issue {
         # This is the end of the search results
         $self->{iter} = undef;
         return;
-    } elsif ($iter->{offset} == $iter->{results}{startAt} + @{$iter->{results}{issues}}) {
+    } elsif ($iter->{offset} == $iter->{results}{startAt} + $iter->{results}{issues}->@*) {
         # Time to get the next bunch of issues
         $iter->{params}{startAt} = $iter->{offset};
         $iter->{results}         = $self->POST('/search', undef, $iter->{params});
@@ -380,7 +380,7 @@ sub attach_files {
     foreach my $file (@files) {
         my $response = $rest->getUseragent()->post(
             $rest->getHost . "/rest/api/latest/issue/$issueIdOrKey/attachments",
-            %{$rest->{_headers}},
+            $rest->{_headers}->%*,
             'X-Atlassian-Token' => 'nocheck',
             'Content-Type'      => 'form-data',
             'Content'           => [ file => [$file, encode_utf8( $file )] ],
@@ -446,7 +446,7 @@ __END__
         fields     => [ qw/summary status assignee/ ],
     });
 
-    foreach my $issue (@{$search->{issues}}) {
+    foreach my $issue ($search->{issues}->@*) {
         print "Found issue $issue->{key}\n";
     }
 
