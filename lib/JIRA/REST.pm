@@ -1,7 +1,7 @@
 package JIRA::REST;
 # ABSTRACT: Thin wrapper around Jira's REST API
 
-use 5.016;
+use 5.034;
 use utf8;
 use warnings;
 
