@@ -29,19 +29,6 @@ sub new {
         $args{url}->path($path);
     }
 
-    unless ($args{anonymous} || $args{pat}) {
-        # If username and password are not set we try to lookup the credentials
-        if (! defined $args{username} || ! defined $args{password}) {
-            ($args{username}, $args{password}) =
-                _search_for_credentials($args{url}, $args{username});
-        }
-
-        foreach (qw/username password/) {
-            croak __PACKAGE__ . "::new: '$_' argument must be a non-empty string.\n"
-                if ! defined $args{$_} || ref $args{$_} || length $args{$_} == 0;
-        }
-    }
-
     my $rest = REST::Client->new($args{rest_client_config});
 
     # Set default base URL
@@ -49,17 +36,6 @@ sub new {
 
     # Follow redirects/authentication by default
     $rest->setFollow(1);
-
-    unless ($args{anonymous} || $args{session}) {
-        # Since Jira doesn't send an authentication challenge, we force the
-        # sending of the authentication header.
-        $rest->addHeader(
-            Authorization =>
-                $args{pat}
-                ? "Bearer $args{pat}"
-                : 'Basic ' . encode_base64("$args{username}:$args{password}", '')
-            );
-    }
 
     for my $ua ($rest->getUseragent) {
         # Configure UserAgent name
@@ -75,16 +51,48 @@ sub new {
         $ua->cookie_jar(HTTP::CookieJar::LWP->new());
     }
 
+    my $use_basic_authentication = 0;
+
+    if ($args{anonymous}) {
+        # Do not authenticate
+    } elsif ($args{pat}) {
+        $rest->addHeader(Authorization => "Bearer $args{pat}");
+    } else {
+        # If username and password are not both set we try to lookup the credentials
+        if (! defined $args{username} || ! defined $args{password}) {
+            ($args{username}, $args{password}) =
+                _search_for_credentials($args{url}, $args{username});
+        }
+
+        foreach (qw/username password/) {
+            croak __PACKAGE__ . "::new: '$_' argument must be a non-empty string.\n"
+                if ! defined $args{$_} || ref $args{$_} || length $args{$_} == 0;
+        }
+
+        $rest->addHeader(
+            Authorization =>
+            'Basic ' . encode_base64("$args{username}:$args{password}", '')
+        );
+
+        $use_basic_authentication = 1;
+    }
+
     my $jira = bless {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
         api  => $api,
     } => $class;
 
-    $jira->{_session} = $jira->POST('/rest/auth/1/session', undef, {
-        username => $args{username},
-        password => $args{password},
-    }) if $args{session};
+    if ($args{session} && $use_basic_authentication) {
+        $jira->{_session} = $jira->POST(
+            '/rest/auth/1/session',
+            undef,
+            {
+                username => $args{username},
+                password => $args{password},
+            },
+        );
+    }
 
     return $jira;
 }
@@ -114,10 +122,6 @@ sub _grok_args {
         $args{url} = URI->new($args{url});
     } elsif (! $args{url}->isa('URI')) {
         croak __PACKAGE__ . "::new: 'url' argument must be a URI object.\n";
-    }
-
-    if (!!$args{anonymous} + !!$args{pat} + !!$args{session} > 1) {
-        croak __PACKAGE__ . "::new: 'anonymous', 'pat', and 'session' are mutually exclusive options.\n"
     }
 
     for ($args{rest_client_config}) {
@@ -517,19 +521,48 @@ one does not specify an API prefix. This is useful if you mainly want to use
 a particular API or if you want to specify a particular version of an API
 during construction.
 
+=item * B<anonymous>
+
+The boolean B<anonymous> authentication argument tells the module if you want to
+connect to the specified Jira with no authentication. This allows you to get
+some information from open or public Jira servers. If enabled, no other
+authentication arguments below are used.
+
+=item * B<pat>
+
+The B<pat> authentication argument is a string representing a L<Personal Access
+Token|https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html>
+that can be used for authentication.  Personal Access Tokens are available since
+Jira 8.14. If enabled, no other authentication arguments below are used.
+
 =item * B<username>
 
 =item * B<password>
 
-The username and password of a Jira user to use for authentication.
+The B<username> and B<password> authentication arguments are strings
+representing the usual credentials of a user. They are used as the default
+authentication method if no other method above is defined. JIRA::REST uses Basic
+HTTP authentication in this case.
 
-If B<anonymous> is false and no B<pat> given, then, if either B<username> or
-B<password> isn't defined the module looks them up in either the C<.netrc> file
-or via L<Config::Identity> (which allows C<gpg> encrypted credentials).
+If either B<username> or B<password> isn't defined the module looks them up in
+either the C<.netrc> file or via L<Config::Identity> (which allows C<gpg>
+encrypted credentials).
 
 L<Config::Identity> will look for F<~/.jira-identity> or F<~/.jira>.
 You can change the filename stub from C<jira> to a custom stub with the
 C<JIRA_REST_IDENTITY> environment variable.
+
+=item * B<session>
+
+The boolean B<session> argument tells the module if you want it to acquire a
+session cookie by making a C<POST /rest/auth/1/session> call to login to
+Jira. This is particularly useful when interacting with Jira Data Center,
+because it can use the session cookie to maintain affinity with one of the
+redundant servers. Upon destruction, the object makes a C<DELETE
+/rest/auth/1/session> call to logout from Jira.
+
+This option is used only if the B<username> and B<password> arguments are also
+used.
 
 =item * B<rest_client_config>
 
@@ -549,35 +582,6 @@ Sets the C<SSL_verify_mode> and C<verify_hostname ssl> options on the
 underlying L<REST::Client>'s user agent to 0, thus disabling them. This
 allows access to Jira servers that have self-signed certificates that don't
 pass L<LWP::UserAgent>'s verification methods.
-
-=item * B<anonymous>
-
-=item * B<pat>
-
-=item * B<session>
-
-These three arguments are mutually exclusive, i.e., you can use at most one of
-them. By default, they are all undefined.
-
-The boolean B<anonymous> argument tells the module if you want to connect to the
-specified Jira with no authentication. This allows you to get some information
-from open or public Jira servers. If enabled, the B<username> and B<password>
-arguments are disregarded.
-
-The B<pat> argument maps to a string which should be a personal access token
-that can be used for authentication instead of a username and a password.  This
-option is available since Jira version 8.14.  Please refer to
-L<https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html>
-for details. If enabled, the B<username> and B<password> arguments are
-disregarded.
-
-The boolean B<session> argument tells the module if you want it to acquire a
-session cookie by making a C<POST /rest/auth/1/session> call to login to
-Jira. This is particularly useful when interacting with Jira Data Center,
-because it can use the session cookie to maintain affinity with one of the
-redundant servers. Upon destruction, the object makes a C<DELETE
-/rest/auth/1/session> call to logout from Jira. If enabled, the B<username> and
-B<password> arguments are required.
 
 =back
 
