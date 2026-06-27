@@ -2,6 +2,12 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+  [Deprecation]
+
+  - Since CentOS is no longer maintained we're dropping support for it and,
+    consequently. Now Jira::REST requires Perl 5.34, which ships with Ubuntu 22.04,
+    which will reach EOL on April, 2027.
+
 0.024     2024-01-21 14:05:30-03:00 America/Sao_Paulo
 
   [Enhancement]
