@@ -79,7 +79,7 @@ If no environment variables set will prompt interactively for entry of user and 
 
 =head1 COPYRIGHT
 
-Copyright 2016-2021 CPQD.
+Copyright 2016-2026 CPQD.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

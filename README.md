@@ -30,7 +30,7 @@ GitHub](https://github.com/gnustavo/JIRA-REST/issues).
 
 ## Copyright & License
 
-JIRA::REST is copyright (c) 2013-2021 of [CPQD](http://www.cpqd.com.br/).
+JIRA::REST is copyright (c) 2013-2026 of [CPQD](http://www.cpqd.com.br/).
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself. About the only thing you
