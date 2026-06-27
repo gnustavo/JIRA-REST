@@ -136,18 +136,6 @@ sub _grok_args {
     return ($class, %args);
 }
 
-sub new_session {
-    my ($class, @args) = @_;
-
-    if (@args == 1 && ref $args[0] && ref $args[0] eq 'HASH') {
-        $args[0]{session} = 1;
-    } else {
-        $args[8] = 1;
-    }
-
-    return $class->new(@args);
-}
-
 sub DESTROY {
     my $self = shift;
     $self->DELETE('/rest/auth/1/session') if exists $self->{_session};
@@ -605,13 +593,6 @@ redundant servers. Upon destruction, the object makes a C<DELETE
 B<password> arguments are required.
 
 =back
-
-=head2 new_session OPTIONS
-
-This alternative constructor simply invokes the default constructor with the
-same options, adding to them the B<session> option. New code should use the
-default constructor with the B<session> option because this constructor may be
-deprecated in the future.
 
 =head1 REST METHODS
 
