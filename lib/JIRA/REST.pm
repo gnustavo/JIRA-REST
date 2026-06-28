@@ -51,6 +51,11 @@ sub new {
         $ua->cookie_jar(HTTP::CookieJar::LWP->new());
     }
 
+    my $self = bless {
+        rest => $rest,
+        json => JSON->new->utf8->allow_nonref,
+        api  => $api,
+    } => $class;
 
     if ($args{anonymous}) {
         $self->{authentication} = 'anonymous';
@@ -58,6 +63,16 @@ sub new {
     } elsif ($args{pat}) {
         $self->{authentication} = 'personal access token';
         $rest->addHeader(Authorization => "Bearer $args{pat}");
+    } elsif ($args{client_id}) {
+        $self->{authentication} = 'access token';
+        foreach (qw/client_secret scope/) {
+            croak __PACKAGE__ . "::new: '$_' argument must be defined when 'client_id' is defined.\n"
+                unless defined $args{$_};
+        }
+
+        my $access_token = _access_token($self, $args{client_id}, $args{client_secret}, $args{scope});
+
+        $rest->addHeader(Authorization => "Bearer $access_token");
     } else {
         $self->{authentication} = 'basic';
         # If username and password are not both set we try to lookup the credentials
@@ -78,12 +93,6 @@ sub new {
 
     }
 
-    my $self = bless {
-        rest => $rest,
-        json => JSON->new->utf8->allow_nonref,
-        api  => $api,
-    } => $class;
-
     if ($args{session} && $self->{authentication} eq 'basic') {
         $self->{session} = $self->POST(
             '/rest/auth/1/session',
@@ -102,7 +111,7 @@ sub _grok_args {
     my ($class, @args) = @_;
 
     # Valid option names in the order expected by the old-form constructor
-    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat session/;
+    my @opts = qw/url username password rest_client_config proxy ssl_verify_none anonymous pat session client_id client_secret scope/;
 
     my %args;
 
@@ -132,6 +141,28 @@ sub _grok_args {
     }
 
     return ($class, %args);
+}
+
+sub _access_token {
+    my ($self, $client_id, $client_secret, $scope) = @_;
+
+    my $path =
+        '/rest/oauth2/latest/token?' .
+        join(
+            '&',
+            'grant_type=client_credentials',
+            'client_id=' . uri_escape($client_id),
+            'client_secret=' . uri_escape($client_secret),
+            'scope=' . uri_escape($scope),
+        );
+
+    $self->{rest}->POST(
+        $path,
+        undef,
+        {'Content-Type' => 'application/x-www-form-urlencoded'},
+    );
+
+    return $self->_content()->{access_token};
 }
 
 sub DESTROY {
@@ -535,6 +566,21 @@ The B<pat> authentication argument is a string representing a L<Personal Access
 Token|https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html>
 that can be used for authentication.  Personal Access Tokens are available since
 Jira 8.14. If enabled, no other authentication arguments below are used.
+
+=item * B<client_id>
+
+=item * B<client_secret>
+
+=item * B<scope>
+
+These authentication arguments are strings used to request an Access Token for a
+L<service
+account|https://confluence.atlassian.com/enterprise/service-accounts-overview-1627095923.html>>
+
+If B<client_id> is set, the other two arguments must also be set. Service
+Account Access Tokens are available since Jira 11.0.
+
+If enabled, no other authentication arguments below are used.
 
 =item * B<username>
 
