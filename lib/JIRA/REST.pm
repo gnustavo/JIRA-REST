@@ -84,7 +84,7 @@ sub new {
     } => $class;
 
     if ($args{session} && $use_basic_authentication) {
-        $self->{_session} = $self->POST(
+        $self->{session} = $self->POST(
             '/rest/auth/1/session',
             undef,
             {
@@ -135,7 +135,7 @@ sub _grok_args {
 
 sub DESTROY {
     my $self = shift;
-    $self->DELETE('/rest/auth/1/session') if exists $self->{_session};
+    $self->DELETE('/rest/auth/1/session') if exists $self->{session};
     return;
 }
 
