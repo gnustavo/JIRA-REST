@@ -51,13 +51,15 @@ sub new {
         $ua->cookie_jar(HTTP::CookieJar::LWP->new());
     }
 
-    my $use_basic_authentication = 0;
 
     if ($args{anonymous}) {
+        $self->{authentication} = 'anonymous';
         # Do not authenticate
     } elsif ($args{pat}) {
+        $self->{authentication} = 'personal access token';
         $rest->addHeader(Authorization => "Bearer $args{pat}");
     } else {
+        $self->{authentication} = 'basic';
         # If username and password are not both set we try to lookup the credentials
         if (! defined $args{username} || ! defined $args{password}) {
             ($args{username}, $args{password}) =
@@ -74,7 +76,6 @@ sub new {
             'Basic ' . encode_base64("$args{username}:$args{password}", '')
         );
 
-        $use_basic_authentication = 1;
     }
 
     my $self = bless {
@@ -83,7 +84,7 @@ sub new {
         api  => $api,
     } => $class;
 
-    if ($args{session} && $use_basic_authentication) {
+    if ($args{session} && $self->{authentication} eq 'basic') {
         $self->{session} = $self->POST(
             '/rest/auth/1/session',
             undef,
