@@ -521,7 +521,7 @@ endpoints have a path prefix of C</rest/agile/VERSION>.
 
 =head2 new HASHREF
 
-=head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, PROXY, SSL_VERIFY_NONE, ANONYMOUS, PAT, SESSION
+=head2 new URL, USERNAME, PASSWORD, REST_CLIENT_CONFIG, PROXY, SSL_VERIFY_NONE, ANONYMOUS, PAT, SESSION, CLIENT_ID, CLIENT_SECRET, SCOPE
 
 The default constructor can take its arguments from a single hash reference or
 from a list of positional parameters. The first form is preferred because it
@@ -582,7 +582,7 @@ Jira 8.14. If enabled, no other authentication arguments below are used.
 
 These authentication arguments are strings used to request an Access Token for a
 L<service
-account|https://confluence.atlassian.com/enterprise/service-accounts-overview-1627095923.html>>
+account|https://confluence.atlassian.com/enterprise/service-accounts-overview-1627095923.html>
 
 If B<client_id> is set, the other two arguments must also be set. Service
 Account Access Tokens are available since Jira 11.0.
