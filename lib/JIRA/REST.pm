@@ -432,6 +432,13 @@ __END__
         session  => 1,
     });
 
+    my $jira_with_session = JIRA::REST->new({
+        url           => 'https://jira.example.net',
+        client_id     => '65621f46751072abf9610275c92203be',
+        client_secret => 'ea520fb8cea0a9372bb555a5315e1a46955f084b3090c33c790f5211251b1c04',
+        scope         => 'READ',
+    });
+
     my $jira_with_pat = JIRA::REST->new({
         url => 'https://jira.example.net',
         pat => 'NDc4NDkyNDg3ODE3OstHYSeYC1GnuqRacSqvUbookcZk',
