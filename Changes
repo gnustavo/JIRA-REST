@@ -2,6 +2,13 @@ Revision history for perl module JIRA-REST. -*- text -*-
 
 {{$NEXT}}
 
+0.025     2026-06-28 16:38:00-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - Implement authentication via Service Accounts, introduced in Jira 11.
+    https://confluence.atlassian.com/enterprise/service-accounts-overview-1627095923.html.
+
   [Deprecation]
 
   - Since CentOS is no longer maintained we're dropping support for it and,
