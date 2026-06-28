@@ -77,14 +77,14 @@ sub new {
         $use_basic_authentication = 1;
     }
 
-    my $jira = bless {
+    my $self = bless {
         rest => $rest,
         json => JSON->new->utf8->allow_nonref,
         api  => $api,
     } => $class;
 
     if ($args{session} && $use_basic_authentication) {
-        $jira->{_session} = $jira->POST(
+        $self->{_session} = $self->POST(
             '/rest/auth/1/session',
             undef,
             {
@@ -94,7 +94,7 @@ sub new {
         );
     }
 
-    return $jira;
+    return $self;
 }
 
 sub _grok_args {
